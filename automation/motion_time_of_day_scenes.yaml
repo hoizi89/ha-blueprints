@@ -420,27 +420,24 @@ actions:
           - condition: trigger
             id: switch_toggle
         sequence:
+          # Cooldown starten (bei AN und AUS)
+          - action: timer.start
+            target:
+              entity_id: !input cooldown_timer
+            data:
+              duration: "{{ switch_cooldown }}"
+
           # Licht togglen
           - choose:
-              # Licht ist AN → ausschalten, KEIN Cooldown (Motion soll sofort wieder gehen)
               - conditions:
                   - condition: template
                     value_template: "{{ lights_are_on }}"
                 sequence:
-                  - action: timer.cancel
-                    target:
-                      entity_id: !input cooldown_timer
                   - action: light.turn_off
                     target: !input target_lights
                     data:
                       transition: "{{ transition_time }}"
-            # Licht ist AUS → einschalten MIT Cooldown (verhindert Motion-Interferenz)
             default:
-              - action: timer.start
-                target:
-                  entity_id: !input cooldown_timer
-                data:
-                  duration: "{{ switch_cooldown }}"
               - action: scene.turn_on
                 target:
                   entity_id: "{{ override_scene }}"
