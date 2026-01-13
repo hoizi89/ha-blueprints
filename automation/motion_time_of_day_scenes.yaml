@@ -355,21 +355,39 @@ actions:
                 data:
                   transition: "{{ transition_time }}"
 
-      # ===== LICHT MANUELL GEÄNDERT =====
+      # ===== LICHT MANUELL EINGESCHALTET =====
       - conditions:
           - condition: trigger
             id: light_changed
+          - condition: template
+            value_template: "{{ trigger.to_state.state == 'on' }}"
           - condition: template
             value_template: "{{ not is_cooldown }}"
           - condition: template
             value_template: "{{ trigger.to_state.context.parent_id is none }}"
         sequence:
-          # Manuelle Änderung erkannt → Cooldown-Timer starten
+          # Manuell eingeschaltet → Cooldown starten
           - action: timer.start
             target:
               entity_id: !input cooldown_timer
             data:
               duration: "{{ cooldown_duration }}"
+
+      # ===== LICHT MANUELL AUSGESCHALTET =====
+      - conditions:
+          - condition: trigger
+            id: light_changed
+          - condition: template
+            value_template: "{{ trigger.to_state.state == 'off' }}"
+          - condition: template
+            value_template: "{{ is_cooldown }}"
+          - condition: template
+            value_template: "{{ trigger.to_state.context.parent_id is none }}"
+        sequence:
+          # Manuell ausgeschaltet → Cooldown beenden, Automation übernimmt
+          - action: timer.cancel
+            target:
+              entity_id: !input cooldown_timer
 
       # ===== BEWEGUNG ERKANNT =====
       - conditions:
