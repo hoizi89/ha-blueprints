@@ -11,7 +11,6 @@ blueprint:
     - Optionale Helligkeitsprüfung (nur bei Dunkelheit aktivieren)
     - Blocker Entity zum Deaktivieren der Automatik
     - Dim-Warnung vor Ausschalten
-    - Device Tracker (nur wenn zuhause)
     - Sanfte Übergänge
   domain: automation
   source_url: https://github.com/hoizi89/ha-blueprints/blob/master/automation/motion_time_of_day_scenes.yaml
@@ -221,17 +220,6 @@ blueprint:
               - switch
               - binary_sensor
 
-    person_home:
-      name: Device Tracker / Person (optional)
-      description: Nur aktivieren wenn zuhause.
-      default: []
-      selector:
-        entity:
-          filter:
-            domain:
-              - person
-              - device_tracker
-
 mode: restart
 max_exceeded: silent
 
@@ -239,7 +227,6 @@ variables:
   illuminance_sensor: !input illuminance_sensor
   illuminance_threshold: !input illuminance_threshold
   blocker_entity: !input blocker_entity
-  person_home: !input person_home
   morning_scene: !input morning_scene
   day_scene: !input day_scene
   evening_scene: !input evening_scene
@@ -269,9 +256,6 @@ variables:
   has_blocker: "{{ blocker_entity | length > 0 }}"
   is_blocked: "{{ has_blocker and states(blocker_entity) == 'on' }}"
 
-  has_person_check: "{{ person_home | length > 0 }}"
-  is_person_home: "{{ not has_person_check or states(person_home) == 'home' }}"
-
   has_illuminance: "{{ illuminance_sensor | length > 0 }}"
   is_dark: "{{ not has_illuminance or (states(illuminance_sensor) | float(0)) < illuminance_threshold }}"
 
@@ -294,7 +278,7 @@ variables:
     {% endif %}
 
   has_current_scene: "{{ current_scene != 'none' }}"
-  can_activate: "{{ not is_blocked and is_person_home and is_dark }}"
+  can_activate: "{{ not is_blocked and is_dark }}"
 
 triggers:
   - id: motion_on
