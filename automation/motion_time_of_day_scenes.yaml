@@ -142,17 +142,30 @@ blueprint:
           step: 30
           unit_of_measurement: seconds
 
-    cooldown_duration:
-      name: Manuelle Sperre
+    switch_cooldown:
+      name: Sperre nach Wandschalter
       description: |
-        Wie lange wird Bewegung ignoriert nach Schalter/App?
-        Verhindert sofortiges Re-Triggern. Empfohlen: 30-60 Sekunden.
+        Kurze Sperre nach Tastendruck.
+        Verhindert sofortiges Re-Triggern.
       default: 45
       selector:
         number:
           min: 10
           max: 300
           step: 5
+          unit_of_measurement: seconds
+
+    manual_cooldown:
+      name: Sperre nach App/Extern
+      description: |
+        Längere Sperre wenn über HA-App oder andere App eingeschaltet.
+        Du behältst die Kontrolle für diese Zeit.
+      default: 900
+      selector:
+        number:
+          min: 60
+          max: 3600
+          step: 60
           unit_of_measurement: seconds
 
     transition_time:
@@ -239,7 +252,8 @@ variables:
   night_scene: !input night_scene
   override_scene: !input override_scene
   transition_time: !input transition_time
-  cooldown_duration: !input cooldown_duration
+  switch_cooldown: !input switch_cooldown
+  manual_cooldown: !input manual_cooldown
   dim_before_off: !input dim_before_off
   dim_level: !input dim_level
   dim_duration: !input dim_duration
@@ -335,12 +349,12 @@ actions:
           - condition: trigger
             id: switch_toggle
         sequence:
-          # Cooldown-Timer starten (ersetzt vorherigen Timer automatisch)
+          # Kurzer Cooldown für Wandschalter
           - action: timer.start
             target:
               entity_id: !input cooldown_timer
             data:
-              duration: "{{ cooldown_duration }}"
+              duration: "{{ switch_cooldown }}"
 
           # Licht togglen
           - choose:
@@ -359,7 +373,7 @@ actions:
                 data:
                   transition: "{{ transition_time }}"
 
-      # ===== LICHT MANUELL EINGESCHALTET =====
+      # ===== LICHT MANUELL EINGESCHALTET (App/Extern) =====
       - conditions:
           - condition: trigger
             id: light_changed
@@ -370,12 +384,12 @@ actions:
           - condition: template
             value_template: "{{ trigger.to_state.context.parent_id is none }}"
         sequence:
-          # Manuell eingeschaltet → Cooldown starten
+          # Langer Cooldown für externe Steuerung
           - action: timer.start
             target:
               entity_id: !input cooldown_timer
             data:
-              duration: "{{ cooldown_duration }}"
+              duration: "{{ manual_cooldown }}"
 
       # ===== LICHT MANUELL AUSGESCHALTET =====
       - conditions:
