@@ -23,19 +23,21 @@ blueprint:
       description: Binary Sensor für Bewegung
       selector:
         entity:
-          domain: binary_sensor
-          device_class:
-            - motion
-            - occupancy
+          filter:
+            domain: binary_sensor
+            device_class:
+              - motion
+              - occupancy
 
     illuminance_sensor:
       name: Helligkeitssensor (optional)
       description: Wenn gesetzt, wird nur bei Dunkelheit das Licht aktiviert.
-      default: ""
+      default: []
       selector:
         entity:
-          domain: sensor
-          device_class: illuminance
+          filter:
+            domain: sensor
+            device_class: illuminance
 
     illuminance_threshold:
       name: Helligkeitsschwelle (Lux)
@@ -54,10 +56,11 @@ blueprint:
       description: Schalter für die helle Override-Szene.
       selector:
         entity:
-          domain:
-            - switch
-            - input_boolean
-            - light
+          filter:
+            domain:
+              - switch
+              - input_boolean
+              - light
 
     target_lights:
       name: Lichter/Gruppe zum Ausschalten
@@ -70,41 +73,46 @@ blueprint:
     morning_scene:
       name: Morgenszene (optional)
       description: Szene für den Morgen. Wenn leer, wird das Licht ausgeschaltet.
-      default: ""
+      default: []
       selector:
         entity:
-          domain: scene
+          filter:
+            domain: scene
 
     day_scene:
       name: Tagszene (optional)
       description: Szene für den Tag. Wenn leer, wird das Licht ausgeschaltet.
-      default: ""
+      default: []
       selector:
         entity:
-          domain: scene
+          filter:
+            domain: scene
 
     evening_scene:
       name: Abendszene (optional)
       description: Szene für den Abend. Wenn leer, wird das Licht ausgeschaltet.
-      default: ""
+      default: []
       selector:
         entity:
-          domain: scene
+          filter:
+            domain: scene
 
     night_scene:
       name: Nachtszene (optional)
       description: Szene für die Nacht. Wenn leer, wird das Licht ausgeschaltet.
-      default: ""
+      default: []
       selector:
         entity:
-          domain: scene
+          filter:
+            domain: scene
 
     override_scene:
       name: Override-Szene (hell / Arbeitslicht)
       description: Szene wenn Override-Schalter eingeschaltet wird.
       selector:
         entity:
-          domain: scene
+          filter:
+            domain: scene
 
     off_delay:
       name: Ausschaltverzögerung (Sekunden)
@@ -204,23 +212,25 @@ blueprint:
     blocker_entity:
       name: Blocker Entity (optional)
       description: Wenn ON, wird die Automatik deaktiviert (z.B. Filmabend).
-      default: ""
+      default: []
       selector:
         entity:
-          domain:
-            - input_boolean
-            - switch
-            - binary_sensor
+          filter:
+            domain:
+              - input_boolean
+              - switch
+              - binary_sensor
 
     person_home:
       name: Device Tracker / Person (optional)
       description: Nur aktivieren wenn zuhause.
-      default: ""
+      default: []
       selector:
         entity:
-          domain:
-            - person
-            - device_tracker
+          filter:
+            domain:
+              - person
+              - device_tracker
 
 mode: restart
 max_exceeded: silent
