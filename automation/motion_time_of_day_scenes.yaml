@@ -7,6 +7,7 @@ blueprint:
     - 4 Tageszeit-Szenen (Morgen, Tag, Abend, Nacht)
     - Eigene Ausschaltzeit pro Tageszeit möglich
     - Toggle-Schalter (Wandschalter/Shelly)
+    - Erkennt manuelle Steuerung (HA-App, etc.) - optional
     - Helligkeitsprüfung (optional)
     - Blocker zum Deaktivieren
     - Dim-Warnung vor Ausschalten
@@ -58,6 +59,15 @@ blueprint:
         entity:
           filter:
             domain: timer
+
+    monitor_light:
+      name: "5. Licht-Überwachung (optional)"
+      description: "Ein Licht oder Gruppe zum Erkennen manueller Änderungen (HA-App, etc.)"
+      default: []
+      selector:
+        entity:
+          filter:
+            domain: light
 
     # ═══════════════════════════════════════════════════════════
     # SZENEN
@@ -279,6 +289,7 @@ max_exceeded: silent
 variables:
   motion_sensor: !input motion_sensor
   cooldown_timer: !input cooldown_timer
+  monitor_light: !input monitor_light
   illuminance_sensor: !input illuminance_sensor
   illuminance_threshold: !input illuminance_threshold
   blocker_entity: !input blocker_entity
@@ -361,6 +372,9 @@ variables:
 
   can_activate: "{{ not is_blocked and not is_cooldown and is_dark }}"
 
+  # Monitor-Licht konfiguriert?
+  has_monitor_light: "{{ monitor_light | length > 0 }}"
+
   # Licht-Status prüfen
   target_lights_input: !input target_lights
   lights_are_on: >
@@ -384,6 +398,10 @@ triggers:
   - id: switch_toggle
     trigger: state
     entity_id: !input override_switch
+
+  - id: light_changed
+    trigger: state
+    entity_id: !input monitor_light
 
   - id: time_change
     trigger: time
@@ -425,6 +443,42 @@ actions:
                   entity_id: "{{ override_scene }}"
                 data:
                   transition: "{{ transition_time }}"
+
+      # ===== LICHT MANUELL EINGESCHALTET =====
+      - conditions:
+          - condition: trigger
+            id: light_changed
+          - condition: template
+            value_template: "{{ has_monitor_light }}"
+          - condition: template
+            value_template: "{{ trigger.to_state.state == 'on' }}"
+          - condition: template
+            value_template: "{{ not is_cooldown }}"
+          - condition: template
+            value_template: "{{ trigger.to_state.context.parent_id is none }}"
+        sequence:
+          - action: timer.start
+            target:
+              entity_id: !input cooldown_timer
+            data:
+              duration: "{{ manual_cooldown }}"
+
+      # ===== LICHT MANUELL AUSGESCHALTET =====
+      - conditions:
+          - condition: trigger
+            id: light_changed
+          - condition: template
+            value_template: "{{ has_monitor_light }}"
+          - condition: template
+            value_template: "{{ trigger.to_state.state == 'off' }}"
+          - condition: template
+            value_template: "{{ is_cooldown }}"
+          - condition: template
+            value_template: "{{ trigger.to_state.context.parent_id is none }}"
+        sequence:
+          - action: timer.cancel
+            target:
+              entity_id: !input cooldown_timer
 
       # ===== BEWEGUNG ERKANNT =====
       - conditions:
