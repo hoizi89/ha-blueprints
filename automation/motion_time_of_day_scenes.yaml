@@ -7,7 +7,6 @@ blueprint:
     - 4 Tageszeit-Szenen (Morgen, Tag, Abend, Nacht)
     - Eigene Ausschaltzeit pro Tageszeit möglich
     - Toggle-Schalter (Wandschalter/Shelly)
-    - Erkennt manuelle Steuerung (HA-App, Nanoleaf, etc.)
     - Helligkeitsprüfung (optional)
     - Blocker zum Deaktivieren
     - Dim-Warnung vor Ausschalten
@@ -386,10 +385,6 @@ triggers:
     trigger: state
     entity_id: !input override_switch
 
-  - id: light_changed
-    trigger: state
-    entity_id: !input target_lights
-
   - id: time_change
     trigger: time
     at:
@@ -430,40 +425,6 @@ actions:
                   entity_id: "{{ override_scene }}"
                 data:
                   transition: "{{ transition_time }}"
-
-      # ===== LICHT MANUELL EINGESCHALTET (App/Extern) =====
-      - conditions:
-          - condition: trigger
-            id: light_changed
-          - condition: template
-            value_template: "{{ trigger.to_state.state == 'on' }}"
-          - condition: template
-            value_template: "{{ not is_cooldown }}"
-          - condition: template
-            value_template: "{{ trigger.to_state.context.parent_id is none }}"
-        sequence:
-          # Langer Cooldown für externe Steuerung
-          - action: timer.start
-            target:
-              entity_id: !input cooldown_timer
-            data:
-              duration: "{{ manual_cooldown }}"
-
-      # ===== LICHT MANUELL AUSGESCHALTET =====
-      - conditions:
-          - condition: trigger
-            id: light_changed
-          - condition: template
-            value_template: "{{ trigger.to_state.state == 'off' }}"
-          - condition: template
-            value_template: "{{ is_cooldown }}"
-          - condition: template
-            value_template: "{{ trigger.to_state.context.parent_id is none }}"
-        sequence:
-          # Manuell ausgeschaltet → Cooldown beenden, Automation übernimmt
-          - action: timer.cancel
-            target:
-              entity_id: !input cooldown_timer
 
       # ===== BEWEGUNG ERKANNT =====
       - conditions:
