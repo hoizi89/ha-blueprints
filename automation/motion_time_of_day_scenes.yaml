@@ -10,7 +10,6 @@ blueprint:
     - Erkennt manuelle Steuerung (HA-App, etc.) - optional
     - Helligkeitsprüfung (optional)
     - Blocker zum Deaktivieren
-    - Dim-Warnung vor Ausschalten
 
     Erstelle einen Timer Helper: Einstellungen → Helfer → Timer
   domain: automation
@@ -254,34 +253,6 @@ blueprint:
               - switch
               - binary_sensor
 
-    # ═══════════════════════════════════════════════════════════
-    # DIM-WARNUNG
-    # ═══════════════════════════════════════════════════════════
-    dim_before_off:
-      name: "Dimmen vor Aus"
-      description: Warnung bevor Licht ausgeht.
-      default: false
-      selector:
-        boolean: {}
-
-    dim_level:
-      name: "Dim-Helligkeit"
-      default: 20
-      selector:
-        number:
-          min: 5
-          max: 50
-          step: 5
-          unit_of_measurement: "%"
-
-    dim_duration:
-      name: "Dim-Dauer"
-      default:
-        seconds: 30
-      selector:
-        duration:
-          enable_day: false
-
 mode: parallel
 max: 3
 max_exceeded: silent
@@ -301,9 +272,6 @@ variables:
   transition_time: !input transition_time
   switch_cooldown: !input switch_cooldown
   manual_cooldown: !input manual_cooldown
-  dim_before_off: !input dim_before_off
-  dim_level: !input dim_level
-  dim_duration: !input dim_duration
   morning_start: !input morning_start
   day_start: !input day_start
   evening_start: !input evening_start
@@ -518,44 +486,11 @@ actions:
             entity_id: !input motion_sensor
             state: "off"
 
-          # Dim-Warnung oder direkt aus
-          - choose:
-              - conditions:
-                  - condition: template
-                    value_template: "{{ dim_before_off }}"
-                sequence:
-                  - action: light.turn_on
-                    target: !input target_lights
-                    data:
-                      brightness_pct: "{{ dim_level }}"
-                      transition: "{{ transition_time }}"
-
-                  - delay: "{{ dim_duration }}"
-
-                  # Nochmal prüfen - vielleicht wieder Bewegung
-                  - choose:
-                      - conditions:
-                          - condition: state
-                            entity_id: !input motion_sensor
-                            state: "on"
-                          - condition: template
-                            value_template: "{{ can_activate and has_current_scene }}"
-                        sequence:
-                          - action: scene.turn_on
-                            target:
-                              entity_id: "{{ current_scene }}"
-                            data:
-                              transition: "{{ transition_time }}"
-                    default:
-                      - action: light.turn_off
-                        target: !input target_lights
-                        data:
-                          transition: "{{ transition_time }}"
-            default:
-              - action: light.turn_off
-                target: !input target_lights
-                data:
-                  transition: "{{ transition_time }}"
+          # Licht ausschalten
+          - action: light.turn_off
+            target: !input target_lights
+            data:
+              transition: "{{ transition_time }}"
 
       # ===== TAGESZEIT WECHSELT =====
       - conditions:
