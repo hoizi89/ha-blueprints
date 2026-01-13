@@ -31,7 +31,7 @@ blueprint:
     illuminance_sensor:
       name: Helligkeitssensor (optional)
       description: Wenn gesetzt, wird nur bei Dunkelheit das Licht aktiviert.
-      default:
+      default: ""
       selector:
         entity:
           domain: sensor
@@ -70,7 +70,7 @@ blueprint:
     morning_scene:
       name: Morgenszene (optional)
       description: Szene für den Morgen. Wenn leer, wird das Licht ausgeschaltet.
-      default:
+      default: ""
       selector:
         entity:
           domain: scene
@@ -78,7 +78,7 @@ blueprint:
     day_scene:
       name: Tagszene (optional)
       description: Szene für den Tag. Wenn leer, wird das Licht ausgeschaltet.
-      default:
+      default: ""
       selector:
         entity:
           domain: scene
@@ -86,7 +86,7 @@ blueprint:
     evening_scene:
       name: Abendszene (optional)
       description: Szene für den Abend. Wenn leer, wird das Licht ausgeschaltet.
-      default:
+      default: ""
       selector:
         entity:
           domain: scene
@@ -94,7 +94,7 @@ blueprint:
     night_scene:
       name: Nachtszene (optional)
       description: Szene für die Nacht. Wenn leer, wird das Licht ausgeschaltet.
-      default:
+      default: ""
       selector:
         entity:
           domain: scene
@@ -204,7 +204,7 @@ blueprint:
     blocker_entity:
       name: Blocker Entity (optional)
       description: Wenn ON, wird die Automatik deaktiviert (z.B. Filmabend).
-      default:
+      default: ""
       selector:
         entity:
           domain:
@@ -215,7 +215,7 @@ blueprint:
     person_home:
       name: Device Tracker / Person (optional)
       description: Nur aktivieren wenn zuhause.
-      default:
+      default: ""
       selector:
         entity:
           domain:
@@ -256,19 +256,19 @@ variables:
   is_evening: "{{ evening_minutes <= now_minutes < night_minutes }}"
   is_night: "{{ now_minutes >= night_minutes or now_minutes < morning_minutes }}"
 
-  has_blocker: "{{ blocker_entity not in [None, '', 'None'] }}"
+  has_blocker: "{{ blocker_entity | length > 0 }}"
   is_blocked: "{{ has_blocker and states(blocker_entity) == 'on' }}"
 
-  has_person_check: "{{ person_home not in [None, '', 'None'] }}"
+  has_person_check: "{{ person_home | length > 0 }}"
   is_person_home: "{{ not has_person_check or states(person_home) == 'home' }}"
 
-  has_illuminance: "{{ illuminance_sensor not in [None, '', 'None'] }}"
+  has_illuminance: "{{ illuminance_sensor | length > 0 }}"
   is_dark: "{{ not has_illuminance or (states(illuminance_sensor) | float(0)) < illuminance_threshold }}"
 
-  has_morning_scene: "{{ morning_scene not in [None, '', 'None'] }}"
-  has_day_scene: "{{ day_scene not in [None, '', 'None'] }}"
-  has_evening_scene: "{{ evening_scene not in [None, '', 'None'] }}"
-  has_night_scene: "{{ night_scene not in [None, '', 'None'] }}"
+  has_morning_scene: "{{ morning_scene | length > 0 }}"
+  has_day_scene: "{{ day_scene | length > 0 }}"
+  has_evening_scene: "{{ evening_scene | length > 0 }}"
+  has_night_scene: "{{ night_scene | length > 0 }}"
 
   current_scene: >
     {% if is_morning and has_morning_scene %}
@@ -329,7 +329,6 @@ conditions: []
 
 actions:
   - choose:
-      # 1) Override EIN
       - conditions:
           - condition: trigger
             id: override_on
@@ -340,7 +339,6 @@ actions:
             data:
               transition: "{{ transition_time }}"
 
-      # 2) Override AUS
       - conditions:
           - condition: trigger
             id: override_off
@@ -364,7 +362,6 @@ actions:
                 data:
                   transition: "{{ transition_time }}"
 
-      # 3) Bewegung erkannt
       - conditions:
           - condition: trigger
             id: motion_on
@@ -380,7 +377,6 @@ actions:
             data:
               transition: "{{ transition_time }}"
 
-      # 4) Bewegung weg (normale Szene)
       - conditions:
           - condition: trigger
             id: motion_off
@@ -432,7 +428,6 @@ actions:
                 data:
                   transition: "{{ transition_time }}"
 
-      # 5) Bewegung weg bei Override aktiv -> Auto-Timeout
       - conditions:
           - condition: trigger
             id: motion_off
@@ -454,7 +449,6 @@ actions:
             target:
               entity_id: !input override_switch
 
-      # 6) Tageszeit-Wechsel
       - conditions:
           - condition: trigger
             id:
