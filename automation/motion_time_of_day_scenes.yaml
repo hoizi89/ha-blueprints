@@ -14,7 +14,7 @@ blueprint:
     - Device Tracker (nur wenn zuhause)
     - Sanfte Übergänge
   domain: automation
-  source_url: https://github.com/hoizi89/ha-blueprints/blob/main/automation/motion_time_of_day_scenes.yaml
+  source_url: https://github.com/hoizi89/ha-blueprints/blob/master/automation/motion_time_of_day_scenes.yaml
   author: hoizi89
 
   input:
