@@ -19,9 +19,12 @@ blueprint:
   author: hoizi89
 
   input:
+    # ═══════════════════════════════════════════════════════════
+    # GRUNDEINSTELLUNGEN
+    # ═══════════════════════════════════════════════════════════
     motion_sensor:
-      name: Bewegungsmelder
-      description: Binary Sensor für Bewegung
+      name: "1. Bewegungsmelder"
+      description: Welcher Sensor erkennt Bewegung?
       selector:
         entity:
           filter:
@@ -31,16 +34,16 @@ blueprint:
               - occupancy
 
     target_lights:
-      name: Ziel-Lichter
-      description: Diese Lichter werden gesteuert.
+      name: "2. Lichter"
+      description: Welche Lichter sollen gesteuert werden?
       selector:
         target:
           entity:
             domain: light
 
     override_switch:
-      name: Wandschalter (Toggle)
-      description: Schalter für manuelle Steuerung. Reagiert auf jeden Tastendruck.
+      name: "3. Wandschalter"
+      description: Welcher Schalter für manuelle Steuerung? (Toggle)
       selector:
         entity:
           filter:
@@ -51,27 +54,27 @@ blueprint:
               - binary_sensor
 
     cooldown_timer:
-      name: Cooldown Timer
-      description: |
-        ERFORDERLICH! Erstelle einen Timer Helper.
-        (Einstellungen → Helfer → Helfer erstellen → Timer)
-        Dauer egal - wird vom Blueprint gesetzt.
+      name: "4. Timer Helper"
+      description: "Erstelle unter: Einstellungen → Helfer → Timer"
       selector:
         entity:
           filter:
             domain: timer
 
+    # ═══════════════════════════════════════════════════════════
+    # SZENEN
+    # ═══════════════════════════════════════════════════════════
     override_scene:
-      name: Override-Szene
-      description: Szene wenn Schalter gedrückt wird und Licht aus ist.
+      name: "Schalter-Szene (hell)"
+      description: Szene wenn Schalter gedrückt und Licht aus ist.
       selector:
         entity:
           filter:
             domain: scene
 
     morning_scene:
-      name: Morgenszene (optional)
-      description: Szene für den Morgen. Leer = Licht aus.
+      name: "Morgen-Szene"
+      description: "Optional. Leer = Licht bleibt aus."
       default: []
       selector:
         entity:
@@ -79,8 +82,8 @@ blueprint:
             domain: scene
 
     day_scene:
-      name: Tagszene (optional)
-      description: Szene für den Tag. Leer = Licht aus.
+      name: "Tag-Szene"
+      description: "Optional. Leer = Licht bleibt aus."
       default: []
       selector:
         entity:
@@ -88,8 +91,8 @@ blueprint:
             domain: scene
 
     evening_scene:
-      name: Abendszene (optional)
-      description: Szene für den Abend. Leer = Licht aus.
+      name: "Abend-Szene"
+      description: "Optional. Leer = Licht bleibt aus."
       default: []
       selector:
         entity:
@@ -97,90 +100,88 @@ blueprint:
             domain: scene
 
     night_scene:
-      name: Nachtszene (optional)
-      description: Szene für die Nacht. Leer = Licht aus.
+      name: "Nacht-Szene"
+      description: "Optional. Leer = Licht bleibt aus."
       default: []
       selector:
         entity:
           filter:
             domain: scene
 
+    # ═══════════════════════════════════════════════════════════
+    # TAGESZEITEN
+    # ═══════════════════════════════════════════════════════════
     morning_start:
-      name: Start Morgen
+      name: "Morgen ab"
       default: "06:00:00"
       selector:
         time: {}
 
     day_start:
-      name: Start Tag
+      name: "Tag ab"
       default: "09:00:00"
       selector:
         time: {}
 
     evening_start:
-      name: Start Abend
+      name: "Abend ab"
       default: "18:00:00"
       selector:
         time: {}
 
     night_start:
-      name: Start Nacht
+      name: "Nacht ab"
       default: "22:00:00"
       selector:
         time: {}
 
+    # ═══════════════════════════════════════════════════════════
+    # ZEITEN
+    # ═══════════════════════════════════════════════════════════
     off_delay:
-      name: Ausschaltverzögerung
-      description: |
-        Wie lange bleibt das Licht an nach letzter Bewegung?
-        Empfohlen: 180-300 Sekunden (3-5 Minuten)
-      default: 180
+      name: "Licht aus nach"
+      description: Wie lange bleibt Licht an nach letzter Bewegung?
+      default:
+        minutes: 3
       selector:
-        number:
-          min: 30
-          max: 1800
-          step: 30
-          unit_of_measurement: seconds
+        duration:
+          enable_day: false
 
     switch_cooldown:
-      name: Sperre nach Wandschalter
-      description: |
-        Kurze Sperre nach Tastendruck.
-        Verhindert sofortiges Re-Triggern.
-      default: 45
+      name: "Sperre nach Schalter"
+      description: Kurz, verhindert sofortiges Re-Triggern.
+      default:
+        seconds: 45
       selector:
-        number:
-          min: 10
-          max: 300
-          step: 5
-          unit_of_measurement: seconds
+        duration:
+          enable_day: false
 
     manual_cooldown:
-      name: Sperre nach App/Extern
-      description: |
-        Längere Sperre wenn über HA-App oder andere App eingeschaltet.
-        Du behältst die Kontrolle für diese Zeit.
-      default: 900
+      name: "Sperre nach App"
+      description: Lang, du behältst Kontrolle.
+      default:
+        minutes: 15
       selector:
-        number:
-          min: 60
-          max: 3600
-          step: 60
-          unit_of_measurement: seconds
+        duration:
+          enable_day: false
 
     transition_time:
-      name: Übergangszeit
+      name: "Übergang"
+      description: Sanftes Ein-/Ausschalten.
       default: 1
       selector:
         number:
           min: 0
           max: 5
           step: 0.5
-          unit_of_measurement: seconds
+          unit_of_measurement: s
 
+    # ═══════════════════════════════════════════════════════════
+    # OPTIONAL
+    # ═══════════════════════════════════════════════════════════
     illuminance_sensor:
-      name: Helligkeitssensor (optional)
-      description: Nur bei Dunkelheit aktivieren.
+      name: "Helligkeitssensor"
+      description: "Optional. Nur bei Dunkelheit einschalten."
       default: []
       selector:
         entity:
@@ -189,7 +190,7 @@ blueprint:
             device_class: illuminance
 
     illuminance_threshold:
-      name: Helligkeitsschwelle
+      name: "Dunkel unter (Lux)"
       default: 50
       selector:
         number:
@@ -199,8 +200,8 @@ blueprint:
           unit_of_measurement: lx
 
     blocker_entity:
-      name: Blocker (optional)
-      description: Wenn ON, ist die komplette Automatik deaktiviert.
+      name: "Blocker"
+      description: "Optional. Wenn ON = Automatik komplett aus."
       default: []
       selector:
         entity:
@@ -210,14 +211,18 @@ blueprint:
               - switch
               - binary_sensor
 
+    # ═══════════════════════════════════════════════════════════
+    # DIM-WARNUNG
+    # ═══════════════════════════════════════════════════════════
     dim_before_off:
-      name: Dimmen vor Ausschalten
+      name: "Dimmen vor Aus"
+      description: Warnung bevor Licht ausgeht.
       default: false
       selector:
         boolean: {}
 
     dim_level:
-      name: Dim-Level
+      name: "Dim-Helligkeit"
       default: 20
       selector:
         number:
@@ -227,14 +232,12 @@ blueprint:
           unit_of_measurement: "%"
 
     dim_duration:
-      name: Dim-Dauer
-      default: 30
+      name: "Dim-Dauer"
+      default:
+        seconds: 30
       selector:
-        number:
-          min: 5
-          max: 120
-          step: 5
-          unit_of_measurement: seconds
+        duration:
+          enable_day: false
 
 mode: parallel
 max: 3
