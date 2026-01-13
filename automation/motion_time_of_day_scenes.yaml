@@ -1,29 +1,23 @@
 blueprint:
   name: Motion Time-of-Day Scenes with Override
-  description: >
+  description: |
     Schaltet je nach Tageszeit unterschiedliche Szenen per Bewegungsmelder.
 
     Features:
     - 4 Tageszeit-Szenen (Morgen, Tag, Abend, Nacht) - alle optional
     - Automatischer Szenen-Wechsel bei Tageszeit-Änderung
     - Automatisches Ausschalten wenn neue Tageszeit keine Szene hat
-    - Override-Schalter für helle Arbeitsszene (Wandschalter/Shelly)
+    - Override-Schalter für helle Arbeitsszene mit Auto-Timeout
     - Optionale Helligkeitsprüfung (nur bei Dunkelheit aktivieren)
     - Blocker Entity zum Deaktivieren der Automatik
-    - Bypass bei manuellem Einschalten
     - Dim-Warnung vor Ausschalten
     - Device Tracker (nur wenn zuhause)
-    - Wochentage wählbar
-    - Sanfte Übergänge mit einstellbarer Transition-Zeit
-
-    Bei Override-Schalter EIN wird die Override-Szene aktiviert.
-    Bei Override-Schalter AUS wird alles ausgeschaltet und die Motion-Automatik übernimmt wieder.
+    - Sanfte Übergänge
   domain: automation
   source_url: https://github.com/hoizi89/ha-blueprints/blob/main/automation/motion_time_of_day_scenes.yaml
   author: hoizi89
 
   input:
-    # === SENSOREN ===
     motion_sensor:
       name: Bewegungsmelder
       description: Binary Sensor für Bewegung
@@ -36,8 +30,8 @@ blueprint:
 
     illuminance_sensor:
       name: Helligkeitssensor (optional)
-      description: Wenn gesetzt, wird nur bei Dunkelheit (unter Schwellwert) das Licht aktiviert.
-      default: {}
+      description: Wenn gesetzt, wird nur bei Dunkelheit das Licht aktiviert.
+      default:
       selector:
         entity:
           domain: sensor
@@ -45,7 +39,7 @@ blueprint:
 
     illuminance_threshold:
       name: Helligkeitsschwelle (Lux)
-      description: Unter diesem Wert gilt es als "dunkel" und das Licht wird aktiviert.
+      description: Unter diesem Wert gilt es als dunkel.
       default: 50
       selector:
         number:
@@ -55,10 +49,9 @@ blueprint:
           unit_of_measurement: lx
           mode: slider
 
-    # === SCHALTER & LICHTER ===
     override_switch:
       name: Override-Schalter (Wandschalter / Shelly)
-      description: Schalter, der die helle Override-Szene aktiviert (ON) und wieder beendet (OFF).
+      description: Schalter für die helle Override-Szene.
       selector:
         entity:
           domain:
@@ -68,53 +61,51 @@ blueprint:
 
     target_lights:
       name: Lichter/Gruppe zum Ausschalten
-      description: Diese Lichter werden bei Bewegungsende oder Override AUS ausgeschaltet.
+      description: Diese Lichter werden bei Bewegungsende ausgeschaltet.
       selector:
         target:
           entity:
             domain: light
 
-    # === SZENEN ===
     morning_scene:
       name: Morgenszene (optional)
-      description: Szene für den Morgen. Wenn leer, wird morgens das Licht AUSGESCHALTET.
-      default: {}
+      description: Szene für den Morgen. Wenn leer, wird das Licht ausgeschaltet.
+      default:
       selector:
         entity:
           domain: scene
 
     day_scene:
       name: Tagszene (optional)
-      description: Szene für den Tag. Wenn leer, wird tagsüber das Licht AUSGESCHALTET.
-      default: {}
+      description: Szene für den Tag. Wenn leer, wird das Licht ausgeschaltet.
+      default:
       selector:
         entity:
           domain: scene
 
     evening_scene:
       name: Abendszene (optional)
-      description: Szene für den Abend. Wenn leer, wird abends das Licht AUSGESCHALTET.
-      default: {}
+      description: Szene für den Abend. Wenn leer, wird das Licht ausgeschaltet.
+      default:
       selector:
         entity:
           domain: scene
 
     night_scene:
       name: Nachtszene (optional)
-      description: Szene für die Nacht. Wenn leer, wird nachts das Licht AUSGESCHALTET.
-      default: {}
+      description: Szene für die Nacht. Wenn leer, wird das Licht ausgeschaltet.
+      default:
       selector:
         entity:
           domain: scene
 
     override_scene:
       name: Override-Szene (hell / Arbeitslicht)
-      description: Szene, die aktiviert wird, wenn der Override-Schalter eingeschaltet wird.
+      description: Szene wenn Override-Schalter eingeschaltet wird.
       selector:
         entity:
           domain: scene
 
-    # === TIMING ===
     off_delay:
       name: Ausschaltverzögerung (Sekunden)
       description: Zeit nach letzter Bewegung bis zum Ausschalten.
@@ -127,9 +118,21 @@ blueprint:
           unit_of_measurement: seconds
           mode: slider
 
+    override_timeout:
+      name: Override Auto-Aus (Sekunden)
+      description: Override-Licht nach dieser Zeit ohne Bewegung automatisch ausschalten. 0 = nie.
+      default: 1800
+      selector:
+        number:
+          min: 0
+          max: 7200
+          step: 60
+          unit_of_measurement: seconds
+          mode: slider
+
     transition_time:
-      name: Übergangszeit für Szenen (Sekunden)
-      description: Sanfter Übergang beim Ein-/Ausschalten und Szenen-Wechsel.
+      name: Übergangszeit (Sekunden)
+      description: Sanfter Übergang beim Schalten.
       default: 1
       selector:
         number:
@@ -139,13 +142,12 @@ blueprint:
           unit_of_measurement: seconds
           mode: slider
 
-    # === DIM-WARNUNG ===
     dim_before_off:
       name: Dimmen vor Ausschalten
-      description: Licht dimmen als Warnung bevor es ausgeht. Bewegung in dieser Zeit verhindert Ausschalten.
+      description: Licht dimmen als Warnung bevor es ausgeht.
       default: false
       selector:
-        boolean: {}
+        boolean:
 
     dim_level:
       name: Dim-Level (%)
@@ -161,7 +163,7 @@ blueprint:
 
     dim_duration:
       name: Dim-Dauer (Sekunden)
-      description: Wie lange das gedimmte Licht als Warnung leuchtet bevor es ausgeht.
+      description: Warndauer bevor das Licht ausgeht.
       default: 30
       selector:
         number:
@@ -171,40 +173,34 @@ blueprint:
           unit_of_measurement: seconds
           mode: slider
 
-    # === TAGESZEITEN ===
     morning_start:
       name: Start Morgen
-      description: Ab dieser Uhrzeit gilt der Morgen-Bereich.
       default: "06:00:00"
       selector:
-        time: {}
+        time:
 
     day_start:
       name: Start Tag
-      description: Ab dieser Uhrzeit gilt der Tag-Bereich.
       default: "09:00:00"
       selector:
-        time: {}
+        time:
 
     evening_start:
       name: Start Abend
-      description: Ab dieser Uhrzeit gilt der Abend-Bereich.
       default: "17:00:00"
       selector:
-        time: {}
+        time:
 
     night_start:
       name: Start Nacht
-      description: Ab dieser Uhrzeit gilt der Nacht-Bereich (bis zum nächsten Morgen-Start).
       default: "22:00:00"
       selector:
-        time: {}
+        time:
 
-    # === ERWEITERTE OPTIONEN ===
     blocker_entity:
       name: Blocker Entity (optional)
-      description: Wenn dieser Schalter/Boolean ON ist, wird die Automatik komplett deaktiviert (z.B. für Filmabend).
-      default: {}
+      description: Wenn ON, wird die Automatik deaktiviert (z.B. Filmabend).
+      default:
       selector:
         entity:
           domain:
@@ -212,85 +208,39 @@ blueprint:
             - switch
             - binary_sensor
 
-    bypass_manual:
-      name: Bypass bei manuellem Einschalten
-      description: Wenn das Licht manuell eingeschaltet wurde (nicht durch diese Automatik), nicht automatisch ausschalten.
-      default: false
-      selector:
-        boolean: {}
-
     person_home:
       name: Device Tracker / Person (optional)
-      description: Nur aktivieren wenn diese Person/Gerät zuhause ist.
-      default: {}
+      description: Nur aktivieren wenn zuhause.
+      default:
       selector:
         entity:
           domain:
             - person
             - device_tracker
 
-    weekdays:
-      name: Aktive Wochentage
-      description: An welchen Tagen soll die Automatik aktiv sein?
-      default:
-        - mon
-        - tue
-        - wed
-        - thu
-        - fri
-        - sat
-        - sun
-      selector:
-        select:
-          multiple: true
-          options:
-            - label: Montag
-              value: mon
-            - label: Dienstag
-              value: tue
-            - label: Mittwoch
-              value: wed
-            - label: Donnerstag
-              value: thu
-            - label: Freitag
-              value: fri
-            - label: Samstag
-              value: sat
-            - label: Sonntag
-              value: sun
-
 mode: restart
 max_exceeded: silent
 
 variables:
-  motion_sensor: !input motion_sensor
-  override_switch: !input override_switch
-  target_lights: !input target_lights
   illuminance_sensor: !input illuminance_sensor
   illuminance_threshold: !input illuminance_threshold
   blocker_entity: !input blocker_entity
   person_home: !input person_home
-  weekdays: !input weekdays
-
   morning_scene: !input morning_scene
   day_scene: !input day_scene
   evening_scene: !input evening_scene
   night_scene: !input night_scene
   override_scene: !input override_scene
-
-  off_delay: !input off_delay
   transition_time: !input transition_time
   dim_before_off: !input dim_before_off
   dim_level: !input dim_level
   dim_duration: !input dim_duration
-  bypass_manual: !input bypass_manual
-
+  override_timeout: !input override_timeout
   morning_start: !input morning_start
   day_start: !input day_start
   evening_start: !input evening_start
   night_start: !input night_start
 
-  # Aktuelle Zeit als Minuten seit Mitternacht
   now_minutes: "{{ now().hour * 60 + now().minute }}"
   morning_minutes: "{{ (morning_start.split(':')[0] | int) * 60 + (morning_start.split(':')[1] | int) }}"
   day_minutes: "{{ (day_start.split(':')[0] | int) * 60 + (day_start.split(':')[1] | int) }}"
@@ -302,44 +252,20 @@ variables:
   is_evening: "{{ evening_minutes <= now_minutes < night_minutes }}"
   is_night: "{{ now_minutes >= night_minutes or now_minutes < morning_minutes }}"
 
-  # Wochentag-Prüfung
-  current_weekday: "{{ ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'][now().weekday()] }}"
-  is_active_weekday: "{{ current_weekday in weekdays }}"
+  has_blocker: "{{ blocker_entity not in [None, '', 'None'] }}"
+  is_blocked: "{{ has_blocker and states(blocker_entity) == 'on' }}"
 
-  # Blocker-Prüfung
-  has_blocker: "{{ blocker_entity is defined and blocker_entity not in ['', None, 'None', 'unknown', 'unavailable'] and blocker_entity is string and blocker_entity | length > 0 }}"
-  is_blocked: >
-    {% if has_blocker %}
-      {{ states(blocker_entity) == 'on' }}
-    {% else %}
-      {{ false }}
-    {% endif %}
+  has_person_check: "{{ person_home not in [None, '', 'None'] }}"
+  is_person_home: "{{ not has_person_check or states(person_home) == 'home' }}"
 
-  # Person zuhause Prüfung
-  has_person_check: "{{ person_home is defined and person_home not in ['', None, 'None', 'unknown', 'unavailable'] and person_home is string and person_home | length > 0 }}"
-  is_person_home: >
-    {% if has_person_check %}
-      {{ states(person_home) == 'home' }}
-    {% else %}
-      {{ true }}
-    {% endif %}
+  has_illuminance: "{{ illuminance_sensor not in [None, '', 'None'] }}"
+  is_dark: "{{ not has_illuminance or (states(illuminance_sensor) | float(0)) < illuminance_threshold }}"
 
-  # Helligkeitsprüfung
-  has_illuminance_sensor: "{{ illuminance_sensor is defined and illuminance_sensor not in ['', None, 'None', 'unknown', 'unavailable'] and illuminance_sensor is string and illuminance_sensor | length > 0 }}"
-  is_dark: >
-    {% if has_illuminance_sensor %}
-      {{ states(illuminance_sensor) | float(0) < illuminance_threshold }}
-    {% else %}
-      {{ true }}
-    {% endif %}
+  has_morning_scene: "{{ morning_scene not in [None, '', 'None'] }}"
+  has_day_scene: "{{ day_scene not in [None, '', 'None'] }}"
+  has_evening_scene: "{{ evening_scene not in [None, '', 'None'] }}"
+  has_night_scene: "{{ night_scene not in [None, '', 'None'] }}"
 
-  # Szenen-Prüfung
-  has_morning_scene: "{{ morning_scene is defined and morning_scene not in ['', None, 'None', 'unknown', 'unavailable'] and morning_scene is string and morning_scene | length > 0 }}"
-  has_day_scene: "{{ day_scene is defined and day_scene not in ['', None, 'None', 'unknown', 'unavailable'] and day_scene is string and day_scene | length > 0 }}"
-  has_evening_scene: "{{ evening_scene is defined and evening_scene not in ['', None, 'None', 'unknown', 'unavailable'] and evening_scene is string and evening_scene | length > 0 }}"
-  has_night_scene: "{{ night_scene is defined and night_scene not in ['', None, 'None', 'unknown', 'unavailable'] and night_scene is string and night_scene | length > 0 }}"
-
-  # Welche Szene soll aktiviert werden? (none = ausschalten)
   current_scene: >
     {% if is_morning and has_morning_scene %}
       {{ morning_scene }}
@@ -354,12 +280,9 @@ variables:
     {% endif %}
 
   has_current_scene: "{{ current_scene != 'none' }}"
-
-  # Gesamte Voraussetzungen für Aktivierung
-  can_activate: "{{ is_active_weekday and not is_blocked and is_person_home and is_dark }}"
+  can_activate: "{{ not is_blocked and is_person_home and is_dark }}"
 
 triggers:
-  # Bewegung
   - id: motion_on
     trigger: state
     entity_id: !input motion_sensor
@@ -372,7 +295,6 @@ triggers:
     from: "on"
     to: "off"
 
-  # Override-Schalter
   - id: override_on
     trigger: state
     entity_id: !input override_switch
@@ -383,7 +305,6 @@ triggers:
     entity_id: !input override_switch
     to: "off"
 
-  # Tageszeit-Wechsel
   - id: time_morning
     trigger: time
     at: !input morning_start
@@ -404,8 +325,7 @@ conditions: []
 
 actions:
   - choose:
-
-      # === 1) OVERRIDE-SCHALTER EIN → Override-Szene aktivieren ===
+      # 1) Override EIN
       - conditions:
           - condition: trigger
             id: override_on
@@ -416,17 +336,31 @@ actions:
             data:
               transition: "{{ transition_time }}"
 
-      # === 2) OVERRIDE-SCHALTER AUS → Lichter ausschalten ===
+      # 2) Override AUS
       - conditions:
           - condition: trigger
             id: override_off
         sequence:
-          - action: light.turn_off
-            target: !input target_lights
-            data:
-              transition: "{{ transition_time }}"
+          - choose:
+              - conditions:
+                  - condition: state
+                    entity_id: !input motion_sensor
+                    state: "on"
+                  - condition: template
+                    value_template: "{{ can_activate and has_current_scene }}"
+                sequence:
+                  - action: scene.turn_on
+                    target:
+                      entity_id: "{{ current_scene }}"
+                    data:
+                      transition: "{{ transition_time }}"
+            default:
+              - action: light.turn_off
+                target: !input target_lights
+                data:
+                  transition: "{{ transition_time }}"
 
-      # === 3) BEWEGUNG ERKANNT → Szene nach Tageszeit einschalten ===
+      # 3) Bewegung erkannt
       - conditions:
           - condition: trigger
             id: motion_on
@@ -434,76 +368,89 @@ actions:
             entity_id: !input override_switch
             state: "off"
           - condition: template
-            value_template: "{{ can_activate }}"
+            value_template: "{{ can_activate and has_current_scene }}"
         sequence:
-          - choose:
-              - conditions:
-                  - condition: template
-                    value_template: "{{ has_current_scene }}"
-                sequence:
-                  - action: scene.turn_on
-                    target:
-                      entity_id: "{{ current_scene }}"
-                    data:
-                      transition: "{{ transition_time }}"
-            default: []
+          - action: scene.turn_on
+            target:
+              entity_id: "{{ current_scene }}"
+            data:
+              transition: "{{ transition_time }}"
 
-      # === 4) BEWEGUNG WEG → Nach Verzögerung ausschalten (mit optionalem Dimmen) ===
+      # 4) Bewegung weg (normale Szene)
       - conditions:
           - condition: trigger
             id: motion_off
+          - condition: state
+            entity_id: !input override_switch
+            state: "off"
         sequence:
-          # Haupt-Verzögerung
           - delay:
               seconds: !input off_delay
-
-          # Prüfe ob immer noch keine Bewegung und kein Override
           - condition: state
             entity_id: !input motion_sensor
             state: "off"
           - condition: state
             entity_id: !input override_switch
             state: "off"
-
-          # Optional: Dimmen als Warnung
           - choose:
               - conditions:
                   - condition: template
                     value_template: "{{ dim_before_off }}"
                 sequence:
-                  # Dimmen
                   - action: light.turn_on
                     target: !input target_lights
                     data:
                       brightness_pct: "{{ dim_level }}"
                       transition: "{{ transition_time }}"
-
-                  # Warte Dim-Dauer
                   - delay:
-                      seconds: !input dim_duration
-
-                  # Prüfe nochmal ob Bewegung (Warnung hat funktioniert?)
-                  - condition: state
-                    entity_id: !input motion_sensor
-                    state: "off"
-                  - condition: state
-                    entity_id: !input override_switch
-                    state: "off"
-
-                  # Jetzt wirklich ausschalten
-                  - action: light.turn_off
-                    target: !input target_lights
-                    data:
-                      transition: "{{ transition_time }}"
-
-            # Ohne Dimmen: Direkt ausschalten
+                      seconds: "{{ dim_duration }}"
+                  - choose:
+                      - conditions:
+                          - condition: state
+                            entity_id: !input motion_sensor
+                            state: "on"
+                          - condition: template
+                            value_template: "{{ has_current_scene }}"
+                        sequence:
+                          - action: scene.turn_on
+                            target:
+                              entity_id: "{{ current_scene }}"
+                            data:
+                              transition: "{{ transition_time }}"
+                    default:
+                      - action: light.turn_off
+                        target: !input target_lights
+                        data:
+                          transition: "{{ transition_time }}"
             default:
               - action: light.turn_off
                 target: !input target_lights
                 data:
                   transition: "{{ transition_time }}"
 
-      # === 5) TAGESZEIT WECHSEL → Szene wechseln oder ausschalten ===
+      # 5) Bewegung weg bei Override aktiv -> Auto-Timeout
+      - conditions:
+          - condition: trigger
+            id: motion_off
+          - condition: state
+            entity_id: !input override_switch
+            state: "on"
+          - condition: template
+            value_template: "{{ override_timeout > 0 }}"
+        sequence:
+          - delay:
+              seconds: "{{ override_timeout }}"
+          - condition: state
+            entity_id: !input motion_sensor
+            state: "off"
+          - condition: state
+            entity_id: !input override_switch
+            state: "on"
+          - action: homeassistant.turn_off
+            target:
+              entity_id: !input override_switch
+
+      # 6) Tageszeit-Wechsel
       - conditions:
           - condition: trigger
             id:
@@ -518,14 +465,12 @@ actions:
             entity_id: !input motion_sensor
             state: "on"
           - condition: template
-            value_template: "{{ not is_blocked }}"
+            value_template: "{{ can_activate }}"
         sequence:
           - choose:
               - conditions:
                   - condition: template
                     value_template: "{{ has_current_scene }}"
-                  - condition: template
-                    value_template: "{{ is_dark }}"
                 sequence:
                   - action: scene.turn_on
                     target:
