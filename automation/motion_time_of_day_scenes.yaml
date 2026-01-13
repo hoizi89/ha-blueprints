@@ -147,7 +147,7 @@ blueprint:
       description: Licht dimmen als Warnung bevor es ausgeht.
       default: false
       selector:
-        boolean:
+        boolean: {}
 
     dim_level:
       name: Dim-Level (%)
@@ -175,27 +175,31 @@ blueprint:
 
     morning_start:
       name: Start Morgen
+      description: Ab dieser Uhrzeit gilt die Morgenszene.
       default: "06:00:00"
       selector:
-        time:
+        time: {}
 
     day_start:
       name: Start Tag
+      description: Ab dieser Uhrzeit gilt die Tagszene.
       default: "09:00:00"
       selector:
-        time:
+        time: {}
 
     evening_start:
       name: Start Abend
+      description: Ab dieser Uhrzeit gilt die Abendszene.
       default: "17:00:00"
       selector:
-        time:
+        time: {}
 
     night_start:
       name: Start Nacht
+      description: Ab dieser Uhrzeit gilt die Nachtszene (bis Morgen).
       default: "22:00:00"
       selector:
-        time:
+        time: {}
 
     blocker_entity:
       name: Blocker Entity (optional)
