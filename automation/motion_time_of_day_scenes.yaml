@@ -12,8 +12,8 @@ blueprint:
     - Blocker Entity zum Deaktivieren der Automatik
     - Dim-Warnung vor Ausschalten
 
-    WICHTIG: Erstelle einen input_boolean Helper für den Cooldown!
-    (Einstellungen → Geräte & Dienste → Helfer → Helfer erstellen → Schalter)
+    WICHTIG: Erstelle einen Timer Helper für den Cooldown!
+    (Einstellungen → Helfer → Helfer erstellen → Timer)
   domain: automation
   source_url: https://github.com/hoizi89/ha-blueprints/blob/master/automation/motion_time_of_day_scenes.yaml
   author: hoizi89
@@ -50,15 +50,16 @@ blueprint:
               - light
               - binary_sensor
 
-    cooldown_helper:
-      name: Cooldown Helper (input_boolean)
+    cooldown_timer:
+      name: Cooldown Timer
       description: |
-        ERFORDERLICH! Erstelle einen input_boolean Helper.
-        Dieser speichert ob gerade Cooldown aktiv ist.
+        ERFORDERLICH! Erstelle einen Timer Helper.
+        (Einstellungen → Helfer → Helfer erstellen → Timer)
+        Dauer egal - wird vom Blueprint gesetzt.
       selector:
         entity:
           filter:
-            domain: input_boolean
+            domain: timer
 
     override_scene:
       name: Override-Szene
@@ -224,7 +225,7 @@ max_exceeded: silent
 
 variables:
   motion_sensor: !input motion_sensor
-  cooldown_helper: !input cooldown_helper
+  cooldown_timer: !input cooldown_timer
   illuminance_sensor: !input illuminance_sensor
   illuminance_threshold: !input illuminance_threshold
   blocker_entity: !input blocker_entity
@@ -279,7 +280,7 @@ variables:
   # Bedingungen
   has_blocker: "{{ blocker_entity | length > 0 }}"
   is_blocked: "{{ has_blocker and states(blocker_entity) == 'on' }}"
-  is_cooldown: "{{ states(cooldown_helper) == 'on' }}"
+  is_cooldown: "{{ states(cooldown_timer) == 'active' }}"
   has_illuminance: "{{ illuminance_sensor | length > 0 }}"
   is_dark: "{{ not has_illuminance or (states(illuminance_sensor) | float(0)) < illuminance_threshold }}"
 
@@ -330,10 +331,12 @@ actions:
           - condition: trigger
             id: switch_toggle
         sequence:
-          # Cooldown aktivieren
-          - action: input_boolean.turn_on
+          # Cooldown-Timer starten (ersetzt vorherigen Timer automatisch)
+          - action: timer.start
             target:
-              entity_id: !input cooldown_helper
+              entity_id: !input cooldown_timer
+            data:
+              duration: "{{ cooldown_duration }}"
 
           # Licht togglen
           - choose:
@@ -352,15 +355,6 @@ actions:
                 data:
                   transition: "{{ transition_time }}"
 
-          # Cooldown-Timer
-          - delay:
-              seconds: "{{ cooldown_duration }}"
-
-          # Cooldown beenden
-          - action: input_boolean.turn_off
-            target:
-              entity_id: !input cooldown_helper
-
       # ===== LICHT MANUELL GEÄNDERT =====
       - conditions:
           - condition: trigger
@@ -370,17 +364,12 @@ actions:
           - condition: template
             value_template: "{{ trigger.to_state.context.parent_id is none }}"
         sequence:
-          # Manuelle Änderung erkannt → Cooldown starten
-          - action: input_boolean.turn_on
+          # Manuelle Änderung erkannt → Cooldown-Timer starten
+          - action: timer.start
             target:
-              entity_id: !input cooldown_helper
-
-          - delay:
-              seconds: "{{ cooldown_duration }}"
-
-          - action: input_boolean.turn_off
-            target:
-              entity_id: !input cooldown_helper
+              entity_id: !input cooldown_timer
+            data:
+              duration: "{{ cooldown_duration }}"
 
       # ===== BEWEGUNG ERKANNT =====
       - conditions:
