@@ -1,19 +1,18 @@
 blueprint:
   name: Motion Time-of-Day Scenes with Override
   description: |
-    Schaltet je nach Tageszeit unterschiedliche Szenen per Bewegungsmelder.
+    Bewegungsgesteuertes Licht mit Tageszeit-Szenen.
 
     Features:
-    - 4 Tageszeit-Szenen (Morgen, Tag, Abend, Nacht) - alle optional
-    - Automatischer Szenen-Wechsel bei Tageszeit-Änderung
-    - Toggle-Schalter (Wandschalter/Shelly) mit Cooldown
-    - Erkennt manuelle Licht-Änderungen (HA-App, andere Apps) → Cooldown
-    - Optionale Helligkeitsprüfung (nur bei Dunkelheit aktivieren)
-    - Blocker Entity zum Deaktivieren der Automatik
+    - 4 Tageszeit-Szenen (Morgen, Tag, Abend, Nacht)
+    - Eigene Ausschaltzeit pro Tageszeit möglich
+    - Toggle-Schalter (Wandschalter/Shelly)
+    - Erkennt manuelle Steuerung (HA-App, Nanoleaf, etc.)
+    - Helligkeitsprüfung (optional)
+    - Blocker zum Deaktivieren
     - Dim-Warnung vor Ausschalten
 
-    WICHTIG: Erstelle einen Timer Helper für den Cooldown!
-    (Einstellungen → Helfer → Helfer erstellen → Timer)
+    Erstelle einen Timer Helper: Einstellungen → Helfer → Timer
   domain: automation
   source_url: https://github.com/hoizi89/ha-blueprints/blob/master/automation/motion_time_of_day_scenes.yaml
   author: hoizi89
@@ -136,17 +135,52 @@ blueprint:
         time: {}
 
     # ═══════════════════════════════════════════════════════════
-    # ZEITEN
+    # AUSSCHALTZEITEN
     # ═══════════════════════════════════════════════════════════
     off_delay:
-      name: "Licht aus nach"
-      description: Wie lange bleibt Licht an nach letzter Bewegung?
+      name: "Standard Ausschaltzeit"
+      description: Gilt für alle Tageszeiten wenn nicht überschrieben.
       default:
         minutes: 3
       selector:
         duration:
           enable_day: false
 
+    morning_off_delay:
+      name: "Morgen Ausschaltzeit"
+      description: "Optional. Leer = Standard verwenden."
+      default: {}
+      selector:
+        duration:
+          enable_day: false
+
+    day_off_delay:
+      name: "Tag Ausschaltzeit"
+      description: "Optional. Leer = Standard verwenden."
+      default: {}
+      selector:
+        duration:
+          enable_day: false
+
+    evening_off_delay:
+      name: "Abend Ausschaltzeit"
+      description: "Optional. Leer = Standard verwenden."
+      default: {}
+      selector:
+        duration:
+          enable_day: false
+
+    night_off_delay:
+      name: "Nacht Ausschaltzeit"
+      description: "Optional. Leer = Standard verwenden."
+      default: {}
+      selector:
+        duration:
+          enable_day: false
+
+    # ═══════════════════════════════════════════════════════════
+    # SPERRZEITEN
+    # ═══════════════════════════════════════════════════════════
     switch_cooldown:
       name: "Sperre nach Schalter"
       description: Kurz, verhindert sofortiges Re-Triggern.
@@ -265,6 +299,13 @@ variables:
   evening_start: !input evening_start
   night_start: !input night_start
 
+  # Ausschaltzeiten
+  off_delay: !input off_delay
+  morning_off_delay: !input morning_off_delay
+  day_off_delay: !input day_off_delay
+  evening_off_delay: !input evening_off_delay
+  night_off_delay: !input night_off_delay
+
   # Tageszeit-Berechnung
   now_minutes: "{{ now().hour * 60 + now().minute }}"
   morning_minutes: "{{ (morning_start.split(':')[0] | int) * 60 + (morning_start.split(':')[1] | int) }}"
@@ -276,6 +317,20 @@ variables:
   is_day: "{{ day_minutes <= now_minutes < evening_minutes }}"
   is_evening: "{{ evening_minutes <= now_minutes < night_minutes }}"
   is_night: "{{ now_minutes >= night_minutes or now_minutes < morning_minutes }}"
+
+  # Aktuelle Ausschaltzeit (mit Fallback auf Standard)
+  current_off_delay: >
+    {% if is_morning and morning_off_delay %}
+      {{ morning_off_delay }}
+    {% elif is_day and day_off_delay %}
+      {{ day_off_delay }}
+    {% elif is_evening and evening_off_delay %}
+      {{ evening_off_delay }}
+    {% elif is_night and night_off_delay %}
+      {{ night_off_delay }}
+    {% else %}
+      {{ off_delay }}
+    {% endif %}
 
   # Szenen-Auswahl
   has_morning_scene: "{{ morning_scene | length > 0 }}"
@@ -428,8 +483,8 @@ actions:
           - condition: trigger
             id: motion_off
         sequence:
-          - delay:
-              seconds: !input off_delay
+          # Dynamische Ausschaltzeit je nach Tageszeit
+          - delay: "{{ current_off_delay }}"
 
           # Prüfen ob immer noch keine Bewegung
           - condition: state
@@ -448,8 +503,7 @@ actions:
                       brightness_pct: "{{ dim_level }}"
                       transition: "{{ transition_time }}"
 
-                  - delay:
-                      seconds: "{{ dim_duration }}"
+                  - delay: "{{ dim_duration }}"
 
                   # Nochmal prüfen - vielleicht wieder Bewegung
                   - choose:
