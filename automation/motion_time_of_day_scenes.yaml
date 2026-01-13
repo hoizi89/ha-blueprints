@@ -131,24 +131,28 @@ blueprint:
 
     off_delay:
       name: Ausschaltverzögerung
-      description: Sekunden nach letzter Bewegung bis zum Ausschalten.
-      default: 300
-      selector:
-        number:
-          min: 0
-          max: 3600
-          step: 10
-          unit_of_measurement: seconds
-
-    cooldown_duration:
-      name: Cooldown nach Schalter
-      description: Sekunden nach Tastendruck in denen Bewegung ignoriert wird.
-      default: 300
+      description: |
+        Wie lange bleibt das Licht an nach letzter Bewegung?
+        Empfohlen: 180-300 Sekunden (3-5 Minuten)
+      default: 180
       selector:
         number:
           min: 30
-          max: 3600
+          max: 1800
           step: 30
+          unit_of_measurement: seconds
+
+    cooldown_duration:
+      name: Manuelle Sperre
+      description: |
+        Wie lange wird Bewegung ignoriert nach Schalter/App?
+        Verhindert sofortiges Re-Triggern. Empfohlen: 30-60 Sekunden.
+      default: 45
+      selector:
+        number:
+          min: 10
+          max: 300
+          step: 5
           unit_of_measurement: seconds
 
     transition_time:
