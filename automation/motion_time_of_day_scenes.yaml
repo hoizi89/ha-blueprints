@@ -7,7 +7,8 @@ blueprint:
     - 4 Tageszeit-Szenen (Morgen, Tag, Abend, Nacht) - alle optional
     - Automatischer Szenen-Wechsel bei Tageszeit-Änderung
     - Automatisches Ausschalten wenn neue Tageszeit keine Szene hat
-    - Override-Schalter für helle Arbeitsszene mit Auto-Timeout
+    - Toggle-Schalter (Wandschalter/Shelly): Licht an → aus, Licht aus → Override-Szene
+    - Cooldown nach manuellem Schalten (Automation pausiert)
     - Optionale Helligkeitsprüfung (nur bei Dunkelheit aktivieren)
     - Blocker Entity zum Deaktivieren der Automatik
     - Dim-Warnung vor Ausschalten
@@ -52,7 +53,7 @@ blueprint:
 
     override_switch:
       name: Override-Schalter (Wandschalter / Shelly)
-      description: Schalter für die helle Override-Szene.
+      description: Schalter für die helle Override-Szene. Reagiert auf Toggle (jede Zustandsänderung).
       selector:
         entity:
           filter:
@@ -60,6 +61,18 @@ blueprint:
               - switch
               - input_boolean
               - light
+
+    manual_cooldown:
+      name: Manuelle Cooldown-Zeit (Sekunden)
+      description: Nach manuellem Schalten wartet die Automation diese Zeit bevor sie wieder aktiviert. 0 = sofort wieder aktiv.
+      default: 300
+      selector:
+        number:
+          min: 0
+          max: 3600
+          step: 30
+          unit_of_measurement: seconds
+          mode: slider
 
     target_lights:
       name: Lichter/Gruppe zum Ausschalten
@@ -122,18 +135,6 @@ blueprint:
           min: 0
           max: 3600
           step: 5
-          unit_of_measurement: seconds
-          mode: slider
-
-    override_timeout:
-      name: Override Auto-Aus (Sekunden)
-      description: Override-Licht nach dieser Zeit ohne Bewegung automatisch ausschalten. 0 = nie.
-      default: 1800
-      selector:
-        number:
-          min: 0
-          max: 7200
-          step: 60
           unit_of_measurement: seconds
           mode: slider
 
@@ -220,13 +221,15 @@ blueprint:
               - switch
               - binary_sensor
 
-mode: restart
+mode: single
 max_exceeded: silent
 
 variables:
   illuminance_sensor: !input illuminance_sensor
   illuminance_threshold: !input illuminance_threshold
   blocker_entity: !input blocker_entity
+  manual_cooldown: !input manual_cooldown
+  target_lights_input: !input target_lights
   morning_scene: !input morning_scene
   day_scene: !input day_scene
   evening_scene: !input evening_scene
@@ -236,7 +239,6 @@ variables:
   dim_before_off: !input dim_before_off
   dim_level: !input dim_level
   dim_duration: !input dim_duration
-  override_timeout: !input override_timeout
   morning_start: !input morning_start
   day_start: !input day_start
   evening_start: !input evening_start
@@ -280,6 +282,11 @@ variables:
   has_current_scene: "{{ current_scene != 'none' }}"
   can_activate: "{{ not is_blocked and is_dark }}"
 
+  lights_are_on: >
+    {% set entities = target_lights_input.entity_id | default([]) %}
+    {% set entity_list = [entities] if entities is string else entities %}
+    {{ entity_list | select('is_state', 'on') | list | count > 0 }}
+
 triggers:
   - id: motion_on
     trigger: state
@@ -293,15 +300,9 @@ triggers:
     from: "on"
     to: "off"
 
-  - id: override_on
+  - id: override_toggle
     trigger: state
     entity_id: !input override_switch
-    to: "on"
-
-  - id: override_off
-    trigger: state
-    entity_id: !input override_switch
-    to: "off"
 
   - id: time_morning
     trigger: time
@@ -325,43 +326,29 @@ actions:
   - choose:
       - conditions:
           - condition: trigger
-            id: override_on
-        sequence:
-          - action: scene.turn_on
-            target:
-              entity_id: "{{ override_scene }}"
-            data:
-              transition: "{{ transition_time }}"
-
-      - conditions:
-          - condition: trigger
-            id: override_off
+            id: override_toggle
         sequence:
           - choose:
               - conditions:
-                  - condition: state
-                    entity_id: !input motion_sensor
-                    state: "on"
                   - condition: template
-                    value_template: "{{ can_activate and has_current_scene }}"
+                    value_template: "{{ lights_are_on }}"
                 sequence:
-                  - action: scene.turn_on
-                    target:
-                      entity_id: "{{ current_scene }}"
+                  - action: light.turn_off
+                    target: !input target_lights
                     data:
                       transition: "{{ transition_time }}"
             default:
-              - action: light.turn_off
-                target: !input target_lights
+              - action: scene.turn_on
+                target:
+                  entity_id: "{{ override_scene }}"
                 data:
                   transition: "{{ transition_time }}"
+          - delay:
+              seconds: "{{ manual_cooldown }}"
 
       - conditions:
           - condition: trigger
             id: motion_on
-          - condition: state
-            entity_id: !input override_switch
-            state: "off"
           - condition: template
             value_template: "{{ can_activate and has_current_scene }}"
         sequence:
@@ -374,17 +361,11 @@ actions:
       - conditions:
           - condition: trigger
             id: motion_off
-          - condition: state
-            entity_id: !input override_switch
-            state: "off"
         sequence:
           - delay:
               seconds: !input off_delay
           - condition: state
             entity_id: !input motion_sensor
-            state: "off"
-          - condition: state
-            entity_id: !input override_switch
             state: "off"
           - choose:
               - conditions:
@@ -424,35 +405,11 @@ actions:
 
       - conditions:
           - condition: trigger
-            id: motion_off
-          - condition: state
-            entity_id: !input override_switch
-            state: "on"
-          - condition: template
-            value_template: "{{ override_timeout > 0 }}"
-        sequence:
-          - delay:
-              seconds: "{{ override_timeout }}"
-          - condition: state
-            entity_id: !input motion_sensor
-            state: "off"
-          - condition: state
-            entity_id: !input override_switch
-            state: "on"
-          - action: homeassistant.turn_off
-            target:
-              entity_id: !input override_switch
-
-      - conditions:
-          - condition: trigger
             id:
               - time_morning
               - time_day
               - time_evening
               - time_night
-          - condition: state
-            entity_id: !input override_switch
-            state: "off"
           - condition: state
             entity_id: !input motion_sensor
             state: "on"
