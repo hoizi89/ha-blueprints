@@ -398,10 +398,22 @@ triggers:
   - id: switch_toggle
     trigger: state
     entity_id: !input override_switch
+    from:
+      - "on"
+      - "off"
+    to:
+      - "on"
+      - "off"
 
   - id: light_changed
     trigger: state
     entity_id: !input monitor_light
+    from:
+      - "on"
+      - "off"
+    to:
+      - "on"
+      - "off"
 
   - id: time_change
     trigger: time
