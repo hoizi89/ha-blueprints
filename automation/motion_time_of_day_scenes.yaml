@@ -5,7 +5,7 @@ blueprint:
 
     Features:
     - 4 Tageszeit-Szenen (Morgen, Tag, Abend, Nacht)
-    - Eigene Ausschaltzeit pro Tageszeit möglich
+    - Eigene Ausschaltzeit pro Tageszeit
     - Toggle-Schalter (Wandschalter/Shelly)
     - Erkennt manuelle Steuerung (HA-App, etc.) - optional
     - Helligkeitsprüfung (optional)
@@ -143,45 +143,40 @@ blueprint:
         time: {}
 
     # ═══════════════════════════════════════════════════════════
-    # AUSSCHALTZEITEN
+    # AUSSCHALTZEITEN (pro Tageszeit)
     # ═══════════════════════════════════════════════════════════
-    off_delay:
-      name: "Standard Ausschaltzeit"
-      description: Gilt für alle Tageszeiten wenn nicht überschrieben.
-      default:
-        minutes: 3
-      selector:
-        duration:
-          enable_day: false
-
     morning_off_delay:
       name: "Morgen Ausschaltzeit"
-      description: "Optional. Leer = Standard verwenden."
-      default: {}
+      description: "Wie lange bleibt das Licht an nach Bewegung?"
+      default:
+        minutes: 10
       selector:
         duration:
           enable_day: false
 
     day_off_delay:
       name: "Tag Ausschaltzeit"
-      description: "Optional. Leer = Standard verwenden."
-      default: {}
+      description: "Wie lange bleibt das Licht an nach Bewegung?"
+      default:
+        minutes: 30
       selector:
         duration:
           enable_day: false
 
     evening_off_delay:
       name: "Abend Ausschaltzeit"
-      description: "Optional. Leer = Standard verwenden."
-      default: {}
+      description: "Wie lange bleibt das Licht an nach Bewegung?"
+      default:
+        minutes: 15
       selector:
         duration:
           enable_day: false
 
     night_off_delay:
       name: "Nacht Ausschaltzeit"
-      description: "Optional. Leer = Standard verwenden."
-      default: {}
+      description: "Wie lange bleibt das Licht an nach Bewegung?"
+      default:
+        minutes: 5
       selector:
         duration:
           enable_day: false
@@ -277,8 +272,7 @@ variables:
   evening_start: !input evening_start
   night_start: !input night_start
 
-  # Ausschaltzeiten
-  off_delay: !input off_delay
+  # Ausschaltzeiten (pro Tageszeit)
   morning_off_delay: !input morning_off_delay
   day_off_delay: !input day_off_delay
   evening_off_delay: !input evening_off_delay
@@ -296,18 +290,16 @@ variables:
   is_evening: "{{ evening_minutes <= now_minutes < night_minutes }}"
   is_night: "{{ now_minutes >= night_minutes or now_minutes < morning_minutes }}"
 
-  # Aktuelle Ausschaltzeit (mit Fallback auf Standard)
+  # Aktuelle Ausschaltzeit (direkt pro Tageszeit)
   current_off_delay: >
-    {% if is_morning and morning_off_delay %}
+    {% if is_morning %}
       {{ morning_off_delay }}
-    {% elif is_day and day_off_delay %}
+    {% elif is_day %}
       {{ day_off_delay }}
-    {% elif is_evening and evening_off_delay %}
+    {% elif is_evening %}
       {{ evening_off_delay }}
-    {% elif is_night and night_off_delay %}
-      {{ night_off_delay }}
     {% else %}
-      {{ off_delay }}
+      {{ night_off_delay }}
     {% endif %}
 
   # Szenen-Auswahl
