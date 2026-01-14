@@ -1,664 +1,633 @@
-blueprint:
-  name: Motion Time-of-Day Scenes with Override
-  description: |
-    Bewegungsgesteuertes Licht mit Tageszeit-Szenen.
+  blueprint:
+    name: Motion Time-of-Day Scenes with Override
+    description: |
+      Bewegungsgesteuertes Licht mit Tageszeit-Szenen.
 
-    Features:
-    - 4 Tageszeit-Szenen (Morgen, Tag, Abend, Nacht)
-    - Adaptive Lighting Support pro Szene
-    - Eigene Ausschaltzeit pro Tageszeit
-    - Toggle-Schalter (Wandschalter/Shelly)
-    - Erkennt manuelle Steuerung (HA-App, etc.) - optional
-    - Helligkeitsprüfung (optional)
-    - Blocker zum Deaktivieren
+      Features:
+      - 4 Tageszeit-Szenen (Morgen, Tag, Abend, Nacht)
+      - Adaptive Lighting Support pro Szene
+      - Eigene Ausschaltzeit pro Tageszeit
+      - Toggle-Schalter (Wandschalter/Shelly)
+      - Erkennt manuelle Steuerung (HA-App, etc.) - optional
+      - Helligkeitsprüfung (optional)
+      - Blocker zum Deaktivieren
 
-    Erstelle 2 Timer Helper: Einstellungen → Helfer → Timer
-    - Cooldown Timer (Sperrzeiten)
-    - Ausschalt-Timer (automatisches Ausschalten)
-  domain: automation
-  source_url: https://github.com/hoizi89/ha-blueprints/blob/master/automation/motion_time_of_day_scenes.yaml
-  author: hoizi89
+      Erstelle 2 Timer Helper: Einstellungen → Helfer → Timer
+      - Cooldown Timer (Sperrzeiten)
+      - Ausschalt-Timer (automatisches Ausschalten)
+    domain: automation
+    source_url: https://github.com/hoizi89/ha-blueprints/blob/master/automation/motion_time_of_day_scenes.yaml
+    author: hoizi89
 
-  input:
-    # ═══════════════════════════════════════════════════════════
-    # GRUNDEINSTELLUNGEN
-    # ═══════════════════════════════════════════════════════════
-    motion_sensor:
-      name: "1. Bewegungsmelder"
-      description: Welcher Sensor erkennt Bewegung?
-      selector:
-        entity:
-          filter:
-            domain: binary_sensor
-            device_class:
-              - motion
-              - occupancy
-
-    target_lights:
-      name: "2. Lichter"
-      description: Welche Lichter sollen gesteuert werden?
-      selector:
-        target:
+    input:
+      motion_sensor:
+        name: "1. Bewegungsmelder"
+        description: Welcher Sensor erkennt Bewegung?
+        selector:
           entity:
-            domain: light
+            filter:
+              domain: binary_sensor
+              device_class:
+                - motion
+                - occupancy
 
-    override_switch:
-      name: "3. Wandschalter"
-      description: Welcher Schalter für manuelle Steuerung? (Toggle)
-      selector:
-        entity:
-          filter:
-            domain:
-              - switch
-              - input_boolean
-              - light
-              - binary_sensor
+      target_lights:
+        name: "2. Lichter"
+        description: Welche Lichter sollen gesteuert werden?
+        selector:
+          target:
+            entity:
+              domain: light
 
-    cooldown_timer:
-      name: "4. Cooldown Timer"
-      description: "Timer für Sperrzeiten. Erstelle unter: Einstellungen → Helfer → Timer"
-      selector:
-        entity:
-          filter:
-            domain: timer
-
-    off_timer:
-      name: "5. Ausschalt-Timer"
-      description: "Timer für automatisches Ausschalten. Erstelle unter: Einstellungen → Helfer → Timer"
-      selector:
-        entity:
-          filter:
-            domain: timer
-
-    monitor_light:
-      name: "6. Licht-Überwachung (optional)"
-      description: "Ein Licht oder Gruppe zum Erkennen manueller Änderungen (HA-App, etc.)"
-      default: []
-      selector:
-        entity:
-          filter:
-            domain: light
-
-    # ═══════════════════════════════════════════════════════════
-    # SZENEN + ADAPTIVE LIGHTING
-    # ═══════════════════════════════════════════════════════════
-    override_scene:
-      name: "Schalter-Szene (hell)"
-      description: Szene wenn Schalter gedrückt und Licht aus ist.
-      selector:
-        entity:
-          filter:
-            domain: scene
-
-    override_adaptive_lights:
-      name: "Schalter - Adaptive Lights"
-      description: "Optional. Diese Lichter werden nach der Szene nochmal ohne Werte eingeschaltet → Adaptive Lighting übernimmt."
-      default: []
-      selector:
-        target:
+      override_switch:
+        name: "3. Wandschalter"
+        description: Welcher Schalter für manuelle Steuerung? (Toggle)
+        selector:
           entity:
-            domain: light
+            filter:
+              domain:
+                - switch
+                - input_boolean
+                - light
+                - binary_sensor
 
-    morning_scene:
-      name: "Morgen-Szene"
-      description: "Optional. Leer = Licht bleibt aus."
-      default: []
-      selector:
-        entity:
-          filter:
-            domain: scene
-
-    morning_adaptive_lights:
-      name: "Morgen - Adaptive Lights"
-      description: "Optional. Diese Lichter werden nach der Szene nochmal ohne Werte eingeschaltet → Adaptive Lighting übernimmt."
-      default: []
-      selector:
-        target:
+      cooldown_timer:
+        name: "4. Cooldown Timer"
+        description: "Timer für Sperrzeiten. Erstelle unter: Einstellungen → Helfer → Timer"
+        selector:
           entity:
-            domain: light
+            filter:
+              domain: timer
 
-    day_scene:
-      name: "Tag-Szene"
-      description: "Optional. Leer = Licht bleibt aus."
-      default: []
-      selector:
-        entity:
-          filter:
-            domain: scene
-
-    day_adaptive_lights:
-      name: "Tag - Adaptive Lights"
-      description: "Optional. Diese Lichter werden nach der Szene nochmal ohne Werte eingeschaltet → Adaptive Lighting übernimmt."
-      default: []
-      selector:
-        target:
+      off_timer:
+        name: "5. Ausschalt-Timer"
+        description: "Timer für automatisches Ausschalten. Erstelle unter: Einstellungen → Helfer → Timer"
+        selector:
           entity:
-            domain: light
+            filter:
+              domain: timer
 
-    evening_scene:
-      name: "Abend-Szene"
-      description: "Optional. Leer = Licht bleibt aus."
-      default: []
-      selector:
-        entity:
-          filter:
-            domain: scene
-
-    evening_adaptive_lights:
-      name: "Abend - Adaptive Lights"
-      description: "Optional. Diese Lichter werden nach der Szene nochmal ohne Werte eingeschaltet → Adaptive Lighting übernimmt."
-      default: []
-      selector:
-        target:
+      monitor_light:
+        name: "6. Licht-Überwachung (optional)"
+        description: "Ein Licht oder Gruppe zum Erkennen manueller Änderungen (HA-App, etc.)"
+        default: []
+        selector:
           entity:
-            domain: light
+            filter:
+              domain: light
 
-    night_scene:
-      name: "Nacht-Szene"
-      description: "Optional. Leer = Licht bleibt aus."
-      default: []
-      selector:
-        entity:
-          filter:
-            domain: scene
-
-    night_adaptive_lights:
-      name: "Nacht - Adaptive Lights"
-      description: "Optional. Diese Lichter werden nach der Szene nochmal ohne Werte eingeschaltet → Adaptive Lighting übernimmt."
-      default: []
-      selector:
-        target:
+      override_scene:
+        name: "Schalter-Szene (hell)"
+        description: Szene wenn Schalter gedrückt wird.
+        selector:
           entity:
-            domain: light
+            filter:
+              domain: scene
 
-    # ═══════════════════════════════════════════════════════════
-    # TAGESZEITEN
-    # ═══════════════════════════════════════════════════════════
-    morning_start:
-      name: "Morgen ab"
-      default: "06:00:00"
-      selector:
-        time: {}
+      override_adaptive_lights:
+        name: "Schalter - Adaptive Lights"
+        description: "Optional. Diese Lichter werden nach der Szene nochmal ohne Werte eingeschaltet → Adaptive Lighting
+   übernimmt."
+        default: []
+        selector:
+          target:
+            entity:
+              domain: light
 
-    day_start:
-      name: "Tag ab"
-      default: "09:00:00"
-      selector:
-        time: {}
+      morning_scene:
+        name: "Morgen-Szene"
+        description: "Optional. Leer = Licht bleibt aus."
+        default: []
+        selector:
+          entity:
+            filter:
+              domain: scene
 
-    evening_start:
-      name: "Abend ab"
-      default: "18:00:00"
-      selector:
-        time: {}
+      morning_adaptive_lights:
+        name: "Morgen - Adaptive Lights"
+        description: "Optional. Diese Lichter werden nach der Szene nochmal ohne Werte eingeschaltet → Adaptive Lighting
+   übernimmt."
+        default: []
+        selector:
+          target:
+            entity:
+              domain: light
 
-    night_start:
-      name: "Nacht ab"
-      default: "22:00:00"
-      selector:
-        time: {}
+      day_scene:
+        name: "Tag-Szene"
+        description: "Optional. Leer = Licht bleibt aus."
+        default: []
+        selector:
+          entity:
+            filter:
+              domain: scene
 
-    # ═══════════════════════════════════════════════════════════
-    # AUSSCHALTZEITEN (pro Tageszeit)
-    # ═══════════════════════════════════════════════════════════
-    morning_off_delay:
-      name: "Morgen Ausschaltzeit"
-      description: "Wie lange bleibt das Licht an nach Bewegung?"
-      default:
-        minutes: 10
-      selector:
-        duration:
-          enable_day: false
+      day_adaptive_lights:
+        name: "Tag - Adaptive Lights"
+        description: "Optional. Diese Lichter werden nach der Szene nochmal ohne Werte eingeschaltet → Adaptive Lighting
+   übernimmt."
+        default: []
+        selector:
+          target:
+            entity:
+              domain: light
 
-    day_off_delay:
-      name: "Tag Ausschaltzeit"
-      description: "Wie lange bleibt das Licht an nach Bewegung?"
-      default:
-        minutes: 30
-      selector:
-        duration:
-          enable_day: false
+      evening_scene:
+        name: "Abend-Szene"
+        description: "Optional. Leer = Licht bleibt aus."
+        default: []
+        selector:
+          entity:
+            filter:
+              domain: scene
 
-    evening_off_delay:
-      name: "Abend Ausschaltzeit"
-      description: "Wie lange bleibt das Licht an nach Bewegung?"
-      default:
-        minutes: 15
-      selector:
-        duration:
-          enable_day: false
+      evening_adaptive_lights:
+        name: "Abend - Adaptive Lights"
+        description: "Optional. Diese Lichter werden nach der Szene nochmal ohne Werte eingeschaltet → Adaptive Lighting
+   übernimmt."
+        default: []
+        selector:
+          target:
+            entity:
+              domain: light
 
-    night_off_delay:
-      name: "Nacht Ausschaltzeit"
-      description: "Wie lange bleibt das Licht an nach Bewegung?"
-      default:
-        minutes: 5
-      selector:
-        duration:
-          enable_day: false
+      night_scene:
+        name: "Nacht-Szene"
+        description: "Optional. Leer = Licht bleibt aus."
+        default: []
+        selector:
+          entity:
+            filter:
+              domain: scene
 
-    # ═══════════════════════════════════════════════════════════
-    # SPERRZEITEN
-    # ═══════════════════════════════════════════════════════════
-    switch_cooldown:
-      name: "Sperre nach Schalter"
-      description: Kurz, verhindert sofortiges Re-Triggern.
-      default:
-        seconds: 45
-      selector:
-        duration:
-          enable_day: false
+      night_adaptive_lights:
+        name: "Nacht - Adaptive Lights"
+        description: "Optional. Diese Lichter werden nach der Szene nochmal ohne Werte eingeschaltet → Adaptive Lighting
+   übernimmt."
+        default: []
+        selector:
+          target:
+            entity:
+              domain: light
 
-    manual_cooldown:
-      name: "Sperre nach App"
-      description: Lang, du behältst Kontrolle.
-      default:
-        minutes: 15
-      selector:
-        duration:
-          enable_day: false
+      morning_start:
+        name: "Morgen ab"
+        default: "06:00:00"
+        selector:
+          time: {}
 
-    transition_time:
-      name: "Übergang"
-      description: Sanftes Ein-/Ausschalten.
-      default: 1
-      selector:
-        number:
-          min: 0
-          max: 5
-          step: 0.5
-          unit_of_measurement: s
+      day_start:
+        name: "Tag ab"
+        default: "09:00:00"
+        selector:
+          time: {}
 
-    # ═══════════════════════════════════════════════════════════
-    # OPTIONAL
-    # ═══════════════════════════════════════════════════════════
-    illuminance_sensor:
-      name: "Helligkeitssensor"
-      description: "Optional. Nur bei Dunkelheit einschalten."
+      evening_start:
+        name: "Abend ab"
+        default: "18:00:00"
+        selector:
+          time: {}
+
+      night_start:
+        name: "Nacht ab"
+        default: "22:00:00"
+        selector:
+          time: {}
+
+      morning_off_delay:
+        name: "Morgen Ausschaltzeit"
+        description: "Wie lange bleibt das Licht an nach Bewegung?"
+        default:
+          minutes: 10
+        selector:
+          duration:
+            enable_day: false
+
+      day_off_delay:
+        name: "Tag Ausschaltzeit"
+        description: "Wie lange bleibt das Licht an nach Bewegung?"
+        default:
+          minutes: 30
+        selector:
+          duration:
+            enable_day: false
+
+      evening_off_delay:
+        name: "Abend Ausschaltzeit"
+        description: "Wie lange bleibt das Licht an nach Bewegung?"
+        default:
+          minutes: 15
+        selector:
+          duration:
+            enable_day: false
+
+      night_off_delay:
+        name: "Nacht Ausschaltzeit"
+        description: "Wie lange bleibt das Licht an nach Bewegung?"
+        default:
+          minutes: 5
+        selector:
+          duration:
+            enable_day: false
+
+      switch_cooldown:
+        name: "Sperre nach Schalter"
+        description: Kurz, verhindert sofortiges Re-Triggern.
+        default:
+          seconds: 45
+        selector:
+          duration:
+            enable_day: false
+
+      manual_cooldown:
+        name: "Sperre nach App"
+        description: Lang, du behältst Kontrolle.
+        default:
+          minutes: 15
+        selector:
+          duration:
+            enable_day: false
+
+      transition_time:
+        name: "Übergang"
+        description: Sanftes Ein-/Ausschalten.
+        default: 1
+        selector:
+          number:
+            min: 0
+            max: 5
+            step: 0.5
+            unit_of_measurement: s
+
+      illuminance_sensor:
+        name: "Helligkeitssensor"
+        description: "Optional. Nur bei Dunkelheit einschalten."
+        default: []
+        selector:
+          entity:
+            filter:
+              domain: sensor
+              device_class: illuminance
+
+      illuminance_threshold:
+        name: "Dunkel unter (Lux)"
+        default: 50
+        selector:
+          number:
+            min: 0
+            max: 500
+            step: 10
+            unit_of_measurement: lx
+
+      blocker_entity:
+        name: "Blocker"
+        description: "Optional. Wenn ON = Automatik komplett aus."
+        default: []
+        selector:
+          entity:
+            filter:
+              domain:
+                - input_boolean
+                - switch
+                - binary_sensor
+
+  mode: parallel
+  max: 3
+  max_exceeded: silent
+
+  variables:
+    motion_sensor: !input motion_sensor
+    cooldown_timer: !input cooldown_timer
+    off_timer: !input off_timer
+    monitor_light: !input monitor_light
+    illuminance_sensor: !input illuminance_sensor
+    illuminance_threshold: !input illuminance_threshold
+    blocker_entity: !input blocker_entity
+    morning_scene: !input morning_scene
+    day_scene: !input day_scene
+    evening_scene: !input evening_scene
+    night_scene: !input night_scene
+    override_scene: !input override_scene
+
+    override_adaptive_lights: !input override_adaptive_lights
+    morning_adaptive_lights: !input morning_adaptive_lights
+    day_adaptive_lights: !input day_adaptive_lights
+    evening_adaptive_lights: !input evening_adaptive_lights
+    night_adaptive_lights: !input night_adaptive_lights
+    transition_time: !input transition_time
+    switch_cooldown: !input switch_cooldown
+    manual_cooldown: !input manual_cooldown
+    morning_start: !input morning_start
+    day_start: !input day_start
+    evening_start: !input evening_start
+    night_start: !input night_start
+
+    morning_off_delay: !input morning_off_delay
+    day_off_delay: !input day_off_delay
+    evening_off_delay: !input evening_off_delay
+    night_off_delay: !input night_off_delay
+
+    now_minutes: "{{ now().hour * 60 + now().minute }}"
+    morning_minutes: "{{ (morning_start.split(':')[0] | int) * 60 + (morning_start.split(':')[1] | int) }}"
+    day_minutes: "{{ (day_start.split(':')[0] | int) * 60 + (day_start.split(':')[1] | int) }}"
+    evening_minutes: "{{ (evening_start.split(':')[0] | int) * 60 + (evening_start.split(':')[1] | int) }}"
+    night_minutes: "{{ (night_start.split(':')[0] | int) * 60 + (night_start.split(':')[1] | int) }}"
+
+    is_morning: "{{ morning_minutes <= now_minutes < day_minutes }}"
+    is_day: "{{ day_minutes <= now_minutes < evening_minutes }}"
+    is_evening: "{{ evening_minutes <= now_minutes < night_minutes }}"
+    is_night: "{{ now_minutes >= night_minutes or now_minutes < morning_minutes }}"
+
+    current_off_delay: >
+      {% if is_morning %}
+        {{ morning_off_delay }}
+      {% elif is_day %}
+        {{ day_off_delay }}
+      {% elif is_evening %}
+        {{ evening_off_delay }}
+      {% else %}
+        {{ night_off_delay }}
+      {% endif %}
+
+    has_morning_scene: "{{ morning_scene | length > 0 }}"
+    has_day_scene: "{{ day_scene | length > 0 }}"
+    has_evening_scene: "{{ evening_scene | length > 0 }}"
+    has_night_scene: "{{ night_scene | length > 0 }}"
+
+    current_scene: >
+      {% if is_morning and has_morning_scene %}
+        {{ morning_scene }}
+      {% elif is_day and has_day_scene %}
+        {{ day_scene }}
+      {% elif is_evening and has_evening_scene %}
+        {{ evening_scene }}
+      {% elif is_night and has_night_scene %}
+        {{ night_scene }}
+      {% else %}
+        none
+      {% endif %}
+
+    has_current_scene: "{{ current_scene != 'none' }}"
+
+    has_override_adaptive_lights: "{{ override_adaptive_lights | length > 0 }}"
+    has_morning_adaptive_lights: "{{ morning_adaptive_lights | length > 0 }}"
+    has_day_adaptive_lights: "{{ day_adaptive_lights | length > 0 }}"
+    has_evening_adaptive_lights: "{{ evening_adaptive_lights | length > 0 }}"
+    has_night_adaptive_lights: "{{ night_adaptive_lights | length > 0 }}"
+
+    current_adaptive_lights: >
+      {% if is_morning %}
+        {{ morning_adaptive_lights }}
+      {% elif is_day %}
+        {{ day_adaptive_lights }}
+      {% elif is_evening %}
+        {{ evening_adaptive_lights }}
+      {% else %}
+        {{ night_adaptive_lights }}
+      {% endif %}
+
+    has_current_adaptive_lights: >
+      {% if is_morning %}
+        {{ has_morning_adaptive_lights }}
+      {% elif is_day %}
+        {{ has_day_adaptive_lights }}
+      {% elif is_evening %}
+        {{ has_evening_adaptive_lights }}
+      {% else %}
+        {{ has_night_adaptive_lights }}
+      {% endif %}
+
+    has_blocker: "{{ blocker_entity | length > 0 }}"
+    is_blocked: "{{ has_blocker and states(blocker_entity) == 'on' }}"
+    is_cooldown: "{{ states(cooldown_timer) == 'active' }}"
+    has_illuminance: "{{ illuminance_sensor | length > 0 }}"
+    is_dark: "{{ not has_illuminance or (states(illuminance_sensor) | float(0)) < illuminance_threshold }}"
+
+    can_activate: "{{ not is_blocked and not is_cooldown and is_dark }}"
+
+    has_monitor_light: "{{ monitor_light | length > 0 }}"
+
+    target_lights_input: !input target_lights
+    lights_are_on: >
+      {% set entities = target_lights_input.entity_id | default([]) %}
+      {% set entity_list = [entities] if entities is string else entities %}
+      {{ entity_list | select('is_state', 'on') | list | count > 0 }}
+
+  triggers:
+    - id: motion_on
+      trigger: state
+      entity_id: !input motion_sensor
+      from: "off"
+      to: "on"
+
+    - id: motion_off
+      trigger: state
+      entity_id: !input motion_sensor
+      from: "on"
+      to: "off"
+
+    - id: switch_toggle
+      trigger: state
+      entity_id: !input override_switch
+      from:
+        - "on"
+        - "off"
+      to:
+        - "on"
+        - "off"
+
+    - id: light_changed
+      trigger: state
+      entity_id: !input monitor_light
+      from:
+        - "on"
+        - "off"
+      to:
+        - "on"
+        - "off"
+
+    - id: time_change
+      trigger: time
+      at:
+        - !input morning_start
+        - !input day_start
+        - !input evening_start
+        - !input night_start
+
+    - id: off_timer_finished
+      trigger: event
+      event_type: timer.finished
+      event_data:
+        entity_id: !input off_timer
+
+  conditions: []
+
+  actions:
+    - choose:
+        # ===== SCHALTER GEDRÜCKT =====
+        - conditions:
+            - condition: trigger
+              id: switch_toggle
+          sequence:
+            - choose:
+                # Cooldown aktiv UND Lichter an = Override läuft = ausschalten
+                - conditions:
+                    - condition: template
+                      value_template: "{{ is_cooldown and lights_are_on }}"
+                  sequence:
+                    - action: timer.cancel
+                      target:
+                        entity_id: !input cooldown_timer
+                    - action: timer.cancel
+                      target:
+                        entity_id: !input off_timer
+                    - action: light.turn_off
+                      target: !input target_lights
+                      data:
+                        transition: "{{ transition_time }}"
+              # Sonst: IMMER Override aktivieren
+              default:
+                - action: timer.start
+                  target:
+                    entity_id: !input cooldown_timer
+                  data:
+                    duration: "{{ switch_cooldown }}"
+                - action: timer.cancel
+                  target:
+                    entity_id: !input off_timer
+                - action: scene.turn_on
+                  target:
+                    entity_id: "{{ override_scene }}"
+                  data:
+                    transition: "{{ transition_time }}"
+                - if:
+                    - condition: template
+                      value_template: "{{ has_override_adaptive_lights }}"
+                  then:
+                    - action: light.turn_on
+                      target: "{{ override_adaptive_lights }}"
+
+        # ===== LICHT MANUELL EINGESCHALTET =====
+        - conditions:
+            - condition: trigger
+              id: light_changed
+            - condition: template
+              value_template: "{{ has_monitor_light }}"
+            - condition: template
+              value_template: "{{ trigger.to_state.state == 'on' }}"
+            - condition: template
+              value_template: "{{ not is_cooldown }}"
+            - condition: template
+              value_template: "{{ trigger.to_state.context.parent_id is none }}"
+          sequence:
+            - action: timer.cancel
+              target:
+                entity_id: !input off_timer
+            - action: timer.start
+              target:
+                entity_id: !input cooldown_timer
+              data:
+                duration: "{{ manual_cooldown }}"
+
+        # ===== LICHT MANUELL AUSGESCHALTET =====
+        - conditions:
+            - condition: trigger
+              id: light_changed
+            - condition: template
+              value_template: "{{ has_monitor_light }}"
+            - condition: template
+              value_template: "{{ trigger.to_state.state == 'off' }}"
+            - condition: template
+              value_template: "{{ is_cooldown }}"
+            - condition: template
+              value_template: "{{ trigger.to_state.context.parent_id is none }}"
+          sequence:
+            - action: timer.cancel
+              target:
+                entity_id: !input cooldown_timer
+
+        # ===== BEWEGUNG ERKANNT =====
+        - conditions:
+            - condition: trigger
+              id: motion_on
+            - condition: template
+              value_template: "{{ lights_are_on or (can_activate and has_current_scene) }}"
+          sequence:
+            - action: timer.start
+              target:
+                entity_id: !input off_timer
+              data:
+                duration: "{{ current_off_delay }}"
+            - if:
+                - condition: template
+                  value_template: "{{ can_activate and has_current_scene and not lights_are_on }}"
+              then:
+                - action: scene.turn_on
+                  target:
+                    entity_id: "{{ current_scene }}"
+                  data:
+                    transition: "{{ transition_time }}"
+                - if:
+                    - condition: template
+                      value_template: "{{ has_current_adaptive_lights }}"
+                  then:
+                    - action: light.turn_on
+                      target: "{{ current_adaptive_lights }}"
+
+        # ===== BEWEGUNG WEG =====
+        - conditions:
+            - condition: trigger
+              id: motion_off
+          sequence:
+            - action: timer.start
+              target:
+                entity_id: !input off_timer
+              data:
+                duration: "{{ current_off_delay }}"
+
+        # ===== AUSSCHALT-TIMER ABGELAUFEN =====
+        - conditions:
+            - condition: trigger
+              id: off_timer_finished
+          sequence:
+            - condition: state
+              entity_id: !input motion_sensor
+              state: "off"
+            - action: light.turn_off
+              target: !input target_lights
+              data:
+                transition: "{{ transition_time }}"
+
+        # ===== TAGESZEIT WECHSELT =====
+        - conditions:
+            - condition: trigger
+              id: time_change
+            - condition: state
+              entity_id: !input motion_sensor
+              state: "on"
+            - condition: template
+              value_template: "{{ can_activate }}"
+          sequence:
+            - choose:
+                - conditions:
+                    - condition: template
+                      value_template: "{{ has_current_scene }}"
+                  sequence:
+                    - action: scene.turn_on
+                      target:
+                        entity_id: "{{ current_scene }}"
+                      data:
+                        transition: "{{ transition_time }}"
+                    - if:
+                        - condition: template
+                          value_template: "{{ has_current_adaptive_lights }}"
+                      then:
+                        - action: light.turn_on
+                          target: "{{ current_adaptive_lights }}"
+              default:
+                - action: light.turn_off
+                  target: !input target_lights
+                  data:
+                    transition: "{{ transition_time }}"
+
       default: []
-      selector:
-        entity:
-          filter:
-            domain: sensor
-            device_class: illuminance
-
-    illuminance_threshold:
-      name: "Dunkel unter (Lux)"
-      default: 50
-      selector:
-        number:
-          min: 0
-          max: 500
-          step: 10
-          unit_of_measurement: lx
-
-    blocker_entity:
-      name: "Blocker"
-      description: "Optional. Wenn ON = Automatik komplett aus."
-      default: []
-      selector:
-        entity:
-          filter:
-            domain:
-              - input_boolean
-              - switch
-              - binary_sensor
-
-mode: parallel
-max: 3
-max_exceeded: silent
-
-variables:
-  motion_sensor: !input motion_sensor
-  cooldown_timer: !input cooldown_timer
-  off_timer: !input off_timer
-  monitor_light: !input monitor_light
-  illuminance_sensor: !input illuminance_sensor
-  illuminance_threshold: !input illuminance_threshold
-  blocker_entity: !input blocker_entity
-  morning_scene: !input morning_scene
-  day_scene: !input day_scene
-  evening_scene: !input evening_scene
-  night_scene: !input night_scene
-  override_scene: !input override_scene
-
-  # Adaptive Lights
-  override_adaptive_lights: !input override_adaptive_lights
-  morning_adaptive_lights: !input morning_adaptive_lights
-  day_adaptive_lights: !input day_adaptive_lights
-  evening_adaptive_lights: !input evening_adaptive_lights
-  night_adaptive_lights: !input night_adaptive_lights
-  transition_time: !input transition_time
-  switch_cooldown: !input switch_cooldown
-  manual_cooldown: !input manual_cooldown
-  morning_start: !input morning_start
-  day_start: !input day_start
-  evening_start: !input evening_start
-  night_start: !input night_start
-
-  # Ausschaltzeiten (pro Tageszeit)
-  morning_off_delay: !input morning_off_delay
-  day_off_delay: !input day_off_delay
-  evening_off_delay: !input evening_off_delay
-  night_off_delay: !input night_off_delay
-
-  # Tageszeit-Berechnung
-  now_minutes: "{{ now().hour * 60 + now().minute }}"
-  morning_minutes: "{{ (morning_start.split(':')[0] | int) * 60 + (morning_start.split(':')[1] | int) }}"
-  day_minutes: "{{ (day_start.split(':')[0] | int) * 60 + (day_start.split(':')[1] | int) }}"
-  evening_minutes: "{{ (evening_start.split(':')[0] | int) * 60 + (evening_start.split(':')[1] | int) }}"
-  night_minutes: "{{ (night_start.split(':')[0] | int) * 60 + (night_start.split(':')[1] | int) }}"
-
-  is_morning: "{{ morning_minutes <= now_minutes < day_minutes }}"
-  is_day: "{{ day_minutes <= now_minutes < evening_minutes }}"
-  is_evening: "{{ evening_minutes <= now_minutes < night_minutes }}"
-  is_night: "{{ now_minutes >= night_minutes or now_minutes < morning_minutes }}"
-
-  # Aktuelle Ausschaltzeit (direkt pro Tageszeit)
-  current_off_delay: >
-    {% if is_morning %}
-      {{ morning_off_delay }}
-    {% elif is_day %}
-      {{ day_off_delay }}
-    {% elif is_evening %}
-      {{ evening_off_delay }}
-    {% else %}
-      {{ night_off_delay }}
-    {% endif %}
-
-  # Szenen-Auswahl
-  has_morning_scene: "{{ morning_scene | length > 0 }}"
-  has_day_scene: "{{ day_scene | length > 0 }}"
-  has_evening_scene: "{{ evening_scene | length > 0 }}"
-  has_night_scene: "{{ night_scene | length > 0 }}"
-
-  current_scene: >
-    {% if is_morning and has_morning_scene %}
-      {{ morning_scene }}
-    {% elif is_day and has_day_scene %}
-      {{ day_scene }}
-    {% elif is_evening and has_evening_scene %}
-      {{ evening_scene }}
-    {% elif is_night and has_night_scene %}
-      {{ night_scene }}
-    {% else %}
-      none
-    {% endif %}
-
-  has_current_scene: "{{ current_scene != 'none' }}"
-
-  # Adaptive Lights Auswahl
-  has_override_adaptive_lights: "{{ override_adaptive_lights | length > 0 }}"
-  has_morning_adaptive_lights: "{{ morning_adaptive_lights | length > 0 }}"
-  has_day_adaptive_lights: "{{ day_adaptive_lights | length > 0 }}"
-  has_evening_adaptive_lights: "{{ evening_adaptive_lights | length > 0 }}"
-  has_night_adaptive_lights: "{{ night_adaptive_lights | length > 0 }}"
-
-  current_adaptive_lights: >
-    {% if is_morning %}
-      {{ morning_adaptive_lights }}
-    {% elif is_day %}
-      {{ day_adaptive_lights }}
-    {% elif is_evening %}
-      {{ evening_adaptive_lights }}
-    {% else %}
-      {{ night_adaptive_lights }}
-    {% endif %}
-
-  has_current_adaptive_lights: >
-    {% if is_morning %}
-      {{ has_morning_adaptive_lights }}
-    {% elif is_day %}
-      {{ has_day_adaptive_lights }}
-    {% elif is_evening %}
-      {{ has_evening_adaptive_lights }}
-    {% else %}
-      {{ has_night_adaptive_lights }}
-    {% endif %}
-
-  # Bedingungen
-  has_blocker: "{{ blocker_entity | length > 0 }}"
-  is_blocked: "{{ has_blocker and states(blocker_entity) == 'on' }}"
-  is_cooldown: "{{ states(cooldown_timer) == 'active' }}"
-  has_illuminance: "{{ illuminance_sensor | length > 0 }}"
-  is_dark: "{{ not has_illuminance or (states(illuminance_sensor) | float(0)) < illuminance_threshold }}"
-
-  can_activate: "{{ not is_blocked and not is_cooldown and is_dark }}"
-
-  # Monitor-Licht konfiguriert?
-  has_monitor_light: "{{ monitor_light | length > 0 }}"
-
-  # Licht-Status prüfen
-  target_lights_input: !input target_lights
-  lights_are_on: >
-    {% set entities = target_lights_input.entity_id | default([]) %}
-    {% set entity_list = [entities] if entities is string else entities %}
-    {{ entity_list | select('is_state', 'on') | list | count > 0 }}
-
-triggers:
-  - id: motion_on
-    trigger: state
-    entity_id: !input motion_sensor
-    from: "off"
-    to: "on"
-
-  - id: motion_off
-    trigger: state
-    entity_id: !input motion_sensor
-    from: "on"
-    to: "off"
-
-  - id: switch_toggle
-    trigger: state
-    entity_id: !input override_switch
-    from:
-      - "on"
-      - "off"
-    to:
-      - "on"
-      - "off"
-
-  - id: light_changed
-    trigger: state
-    entity_id: !input monitor_light
-    from:
-      - "on"
-      - "off"
-    to:
-      - "on"
-      - "off"
-
-  - id: time_change
-    trigger: time
-    at:
-      - !input morning_start
-      - !input day_start
-      - !input evening_start
-      - !input night_start
-
-  - id: off_timer_finished
-    trigger: event
-    event_type: timer.finished
-    event_data:
-      entity_id: !input off_timer
-
-conditions: []
-
-actions:
-  - choose:
-      # ===== SCHALTER GEDRÜCKT =====
-      - conditions:
-          - condition: trigger
-            id: switch_toggle
-        sequence:
-          # Cooldown starten (bei AN und AUS)
-          - action: timer.start
-            target:
-              entity_id: !input cooldown_timer
-            data:
-              duration: "{{ switch_cooldown }}"
-
-          # Licht togglen
-          - choose:
-              - conditions:
-                  - condition: template
-                    value_template: "{{ lights_are_on }}"
-                sequence:
-                  # Ausschalt-Timer stoppen
-                  - action: timer.cancel
-                    target:
-                      entity_id: !input off_timer
-                  - action: light.turn_off
-                    target: !input target_lights
-                    data:
-                      transition: "{{ transition_time }}"
-            default:
-              # Ausschalt-Timer stoppen (falls noch von vorher aktiv)
-              - action: timer.cancel
-                target:
-                  entity_id: !input off_timer
-              - action: scene.turn_on
-                target:
-                  entity_id: "{{ override_scene }}"
-                data:
-                  transition: "{{ transition_time }}"
-              # Adaptive Lights einschalten (ohne Werte → AL übernimmt)
-              - if:
-                  - condition: template
-                    value_template: "{{ has_override_adaptive_lights }}"
-                then:
-                  - action: light.turn_on
-                    target: "{{ override_adaptive_lights }}"
-
-      # ===== LICHT MANUELL EINGESCHALTET =====
-      - conditions:
-          - condition: trigger
-            id: light_changed
-          - condition: template
-            value_template: "{{ has_monitor_light }}"
-          - condition: template
-            value_template: "{{ trigger.to_state.state == 'on' }}"
-          - condition: template
-            value_template: "{{ not is_cooldown }}"
-          - condition: template
-            value_template: "{{ trigger.to_state.context.parent_id is none }}"
-        sequence:
-          # Ausschalt-Timer stoppen (falls noch von vorher aktiv)
-          - action: timer.cancel
-            target:
-              entity_id: !input off_timer
-          - action: timer.start
-            target:
-              entity_id: !input cooldown_timer
-            data:
-              duration: "{{ manual_cooldown }}"
-
-      # ===== LICHT MANUELL AUSGESCHALTET =====
-      - conditions:
-          - condition: trigger
-            id: light_changed
-          - condition: template
-            value_template: "{{ has_monitor_light }}"
-          - condition: template
-            value_template: "{{ trigger.to_state.state == 'off' }}"
-          - condition: template
-            value_template: "{{ is_cooldown }}"
-          - condition: template
-            value_template: "{{ trigger.to_state.context.parent_id is none }}"
-        sequence:
-          - action: timer.cancel
-            target:
-              entity_id: !input cooldown_timer
-
-      # ===== BEWEGUNG ERKANNT =====
-      - conditions:
-          - condition: trigger
-            id: motion_on
-          - condition: template
-            value_template: "{{ lights_are_on or (can_activate and has_current_scene) }}"
-        sequence:
-          # Ausschalt-Timer neu starten (verlängern)
-          - action: timer.start
-            target:
-              entity_id: !input off_timer
-            data:
-              duration: "{{ current_off_delay }}"
-          # Szene nur aktivieren wenn erlaubt (und Licht noch nicht an)
-          - if:
-              - condition: template
-                value_template: "{{ can_activate and has_current_scene and not lights_are_on }}"
-            then:
-              - action: scene.turn_on
-                target:
-                  entity_id: "{{ current_scene }}"
-                data:
-                  transition: "{{ transition_time }}"
-              # Adaptive Lights einschalten (ohne Werte → AL übernimmt)
-              - if:
-                  - condition: template
-                    value_template: "{{ has_current_adaptive_lights }}"
-                then:
-                  - action: light.turn_on
-                    target: "{{ current_adaptive_lights }}"
-
-      # ===== BEWEGUNG WEG =====
-      - conditions:
-          - condition: trigger
-            id: motion_off
-        sequence:
-          # Ausschalt-Timer starten (Licht geht aus wenn Timer endet)
-          - action: timer.start
-            target:
-              entity_id: !input off_timer
-            data:
-              duration: "{{ current_off_delay }}"
-
-      # ===== AUSSCHALT-TIMER ABGELAUFEN =====
-      - conditions:
-          - condition: trigger
-            id: off_timer_finished
-        sequence:
-          # Prüfen ob immer noch keine Bewegung
-          - condition: state
-            entity_id: !input motion_sensor
-            state: "off"
-          # Licht ausschalten
-          - action: light.turn_off
-            target: !input target_lights
-            data:
-              transition: "{{ transition_time }}"
-
-      # ===== TAGESZEIT WECHSELT =====
-      - conditions:
-          - condition: trigger
-            id: time_change
-          - condition: state
-            entity_id: !input motion_sensor
-            state: "on"
-          - condition: template
-            value_template: "{{ can_activate }}"
-        sequence:
-          - choose:
-              - conditions:
-                  - condition: template
-                    value_template: "{{ has_current_scene }}"
-                sequence:
-                  - action: scene.turn_on
-                    target:
-                      entity_id: "{{ current_scene }}"
-                    data:
-                      transition: "{{ transition_time }}"
-                  # Adaptive Lights einschalten (ohne Werte → AL übernimmt)
-                  - if:
-                      - condition: template
-                        value_template: "{{ has_current_adaptive_lights }}"
-                    then:
-                      - action: light.turn_on
-                        target: "{{ current_adaptive_lights }}"
-            default:
-              - action: light.turn_off
-                target: !input target_lights
-                data:
-                  transition: "{{ transition_time }}"
-
-    default: []
