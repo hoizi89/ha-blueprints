@@ -12,7 +12,9 @@ blueprint:
     - Helligkeitsprüfung (optional)
     - Blocker zum Deaktivieren
 
-    Erstelle einen Timer Helper: Einstellungen → Helfer → Timer
+    Erstelle 2 Timer Helper: Einstellungen → Helfer → Timer
+    - Cooldown Timer (Sperrzeiten)
+    - Ausschalt-Timer (automatisches Ausschalten)
   domain: automation
   source_url: https://github.com/hoizi89/ha-blueprints/blob/master/automation/motion_time_of_day_scenes.yaml
   author: hoizi89
@@ -53,15 +55,23 @@ blueprint:
               - binary_sensor
 
     cooldown_timer:
-      name: "4. Timer Helper"
-      description: "Erstelle unter: Einstellungen → Helfer → Timer"
+      name: "4. Cooldown Timer"
+      description: "Timer für Sperrzeiten. Erstelle unter: Einstellungen → Helfer → Timer"
+      selector:
+        entity:
+          filter:
+            domain: timer
+
+    off_timer:
+      name: "5. Ausschalt-Timer"
+      description: "Timer für automatisches Ausschalten. Erstelle unter: Einstellungen → Helfer → Timer"
       selector:
         entity:
           filter:
             domain: timer
 
     monitor_light:
-      name: "5. Licht-Überwachung (optional)"
+      name: "6. Licht-Überwachung (optional)"
       description: "Ein Licht oder Gruppe zum Erkennen manueller Änderungen (HA-App, etc.)"
       default: []
       selector:
@@ -301,6 +311,7 @@ max_exceeded: silent
 variables:
   motion_sensor: !input motion_sensor
   cooldown_timer: !input cooldown_timer
+  off_timer: !input off_timer
   monitor_light: !input monitor_light
   illuminance_sensor: !input illuminance_sensor
   illuminance_threshold: !input illuminance_threshold
@@ -465,6 +476,12 @@ triggers:
       - !input evening_start
       - !input night_start
 
+  - id: off_timer_finished
+    trigger: event
+    event_type: timer.finished
+    event_data:
+      entity_id: !input off_timer
+
 conditions: []
 
 actions:
@@ -487,6 +504,10 @@ actions:
                   - condition: template
                     value_template: "{{ lights_are_on }}"
                 sequence:
+                  # Ausschalt-Timer stoppen
+                  - action: timer.cancel
+                    target:
+                      entity_id: !input off_timer
                   - action: light.turn_off
                     target: !input target_lights
                     data:
@@ -548,6 +569,12 @@ actions:
           - condition: template
             value_template: "{{ can_activate and has_current_scene }}"
         sequence:
+          # Ausschalt-Timer neu starten (verlängern)
+          - action: timer.start
+            target:
+              entity_id: !input off_timer
+            data:
+              duration: "{{ current_off_delay }}"
           - action: scene.turn_on
             target:
               entity_id: "{{ current_scene }}"
@@ -566,14 +593,22 @@ actions:
           - condition: trigger
             id: motion_off
         sequence:
-          # Dynamische Ausschaltzeit je nach Tageszeit
-          - delay: "{{ current_off_delay }}"
+          # Ausschalt-Timer starten (Licht geht aus wenn Timer endet)
+          - action: timer.start
+            target:
+              entity_id: !input off_timer
+            data:
+              duration: "{{ current_off_delay }}"
 
+      # ===== AUSSCHALT-TIMER ABGELAUFEN =====
+      - conditions:
+          - condition: trigger
+            id: off_timer_finished
+        sequence:
           # Prüfen ob immer noch keine Bewegung
           - condition: state
             entity_id: !input motion_sensor
             state: "off"
-
           # Licht ausschalten
           - action: light.turn_off
             target: !input target_lights
