@@ -5,6 +5,7 @@ blueprint:
 
     Features:
     - 4 Tageszeit-Szenen (Morgen, Tag, Abend, Nacht)
+    - Adaptive Lighting Support pro Szene
     - Eigene Ausschaltzeit pro Tageszeit
     - Toggle-Schalter (Wandschalter/Shelly)
     - Erkennt manuelle Steuerung (HA-App, etc.) - optional
@@ -69,7 +70,7 @@ blueprint:
             domain: light
 
     # ═══════════════════════════════════════════════════════════
-    # SZENEN
+    # SZENEN + ADAPTIVE LIGHTING
     # ═══════════════════════════════════════════════════════════
     override_scene:
       name: "Schalter-Szene (hell)"
@@ -78,6 +79,15 @@ blueprint:
         entity:
           filter:
             domain: scene
+
+    override_adaptive_lights:
+      name: "Schalter - Adaptive Lights"
+      description: "Optional. Diese Lichter werden nach der Szene nochmal ohne Werte eingeschaltet → Adaptive Lighting übernimmt."
+      default: []
+      selector:
+        target:
+          entity:
+            domain: light
 
     morning_scene:
       name: "Morgen-Szene"
@@ -88,6 +98,15 @@ blueprint:
           filter:
             domain: scene
 
+    morning_adaptive_lights:
+      name: "Morgen - Adaptive Lights"
+      description: "Optional. Diese Lichter werden nach der Szene nochmal ohne Werte eingeschaltet → Adaptive Lighting übernimmt."
+      default: []
+      selector:
+        target:
+          entity:
+            domain: light
+
     day_scene:
       name: "Tag-Szene"
       description: "Optional. Leer = Licht bleibt aus."
@@ -96,6 +115,15 @@ blueprint:
         entity:
           filter:
             domain: scene
+
+    day_adaptive_lights:
+      name: "Tag - Adaptive Lights"
+      description: "Optional. Diese Lichter werden nach der Szene nochmal ohne Werte eingeschaltet → Adaptive Lighting übernimmt."
+      default: []
+      selector:
+        target:
+          entity:
+            domain: light
 
     evening_scene:
       name: "Abend-Szene"
@@ -106,6 +134,15 @@ blueprint:
           filter:
             domain: scene
 
+    evening_adaptive_lights:
+      name: "Abend - Adaptive Lights"
+      description: "Optional. Diese Lichter werden nach der Szene nochmal ohne Werte eingeschaltet → Adaptive Lighting übernimmt."
+      default: []
+      selector:
+        target:
+          entity:
+            domain: light
+
     night_scene:
       name: "Nacht-Szene"
       description: "Optional. Leer = Licht bleibt aus."
@@ -114,6 +151,15 @@ blueprint:
         entity:
           filter:
             domain: scene
+
+    night_adaptive_lights:
+      name: "Nacht - Adaptive Lights"
+      description: "Optional. Diese Lichter werden nach der Szene nochmal ohne Werte eingeschaltet → Adaptive Lighting übernimmt."
+      default: []
+      selector:
+        target:
+          entity:
+            domain: light
 
     # ═══════════════════════════════════════════════════════════
     # TAGESZEITEN
@@ -264,6 +310,13 @@ variables:
   evening_scene: !input evening_scene
   night_scene: !input night_scene
   override_scene: !input override_scene
+
+  # Adaptive Lights
+  override_adaptive_lights: !input override_adaptive_lights
+  morning_adaptive_lights: !input morning_adaptive_lights
+  day_adaptive_lights: !input day_adaptive_lights
+  evening_adaptive_lights: !input evening_adaptive_lights
+  night_adaptive_lights: !input night_adaptive_lights
   transition_time: !input transition_time
   switch_cooldown: !input switch_cooldown
   manual_cooldown: !input manual_cooldown
@@ -322,6 +375,35 @@ variables:
     {% endif %}
 
   has_current_scene: "{{ current_scene != 'none' }}"
+
+  # Adaptive Lights Auswahl
+  has_override_adaptive_lights: "{{ override_adaptive_lights | length > 0 }}"
+  has_morning_adaptive_lights: "{{ morning_adaptive_lights | length > 0 }}"
+  has_day_adaptive_lights: "{{ day_adaptive_lights | length > 0 }}"
+  has_evening_adaptive_lights: "{{ evening_adaptive_lights | length > 0 }}"
+  has_night_adaptive_lights: "{{ night_adaptive_lights | length > 0 }}"
+
+  current_adaptive_lights: >
+    {% if is_morning %}
+      {{ morning_adaptive_lights }}
+    {% elif is_day %}
+      {{ day_adaptive_lights }}
+    {% elif is_evening %}
+      {{ evening_adaptive_lights }}
+    {% else %}
+      {{ night_adaptive_lights }}
+    {% endif %}
+
+  has_current_adaptive_lights: >
+    {% if is_morning %}
+      {{ has_morning_adaptive_lights }}
+    {% elif is_day %}
+      {{ has_day_adaptive_lights }}
+    {% elif is_evening %}
+      {{ has_evening_adaptive_lights }}
+    {% else %}
+      {{ has_night_adaptive_lights }}
+    {% endif %}
 
   # Bedingungen
   has_blocker: "{{ blocker_entity | length > 0 }}"
@@ -415,6 +497,13 @@ actions:
                   entity_id: "{{ override_scene }}"
                 data:
                   transition: "{{ transition_time }}"
+              # Adaptive Lights einschalten (ohne Werte → AL übernimmt)
+              - if:
+                  - condition: template
+                    value_template: "{{ has_override_adaptive_lights }}"
+                then:
+                  - action: light.turn_on
+                    target: !input override_adaptive_lights
 
       # ===== LICHT MANUELL EINGESCHALTET =====
       - conditions:
@@ -464,6 +553,13 @@ actions:
               entity_id: "{{ current_scene }}"
             data:
               transition: "{{ transition_time }}"
+          # Adaptive Lights einschalten (ohne Werte → AL übernimmt)
+          - if:
+              - condition: template
+                value_template: "{{ has_current_adaptive_lights }}"
+            then:
+              - action: light.turn_on
+                target: "{{ current_adaptive_lights }}"
 
       # ===== BEWEGUNG WEG =====
       - conditions:
@@ -504,6 +600,13 @@ actions:
                       entity_id: "{{ current_scene }}"
                     data:
                       transition: "{{ transition_time }}"
+                  # Adaptive Lights einschalten (ohne Werte → AL übernimmt)
+                  - if:
+                      - condition: template
+                        value_template: "{{ has_current_adaptive_lights }}"
+                    then:
+                      - action: light.turn_on
+                        target: "{{ current_adaptive_lights }}"
             default:
               - action: light.turn_off
                 target: !input target_lights
