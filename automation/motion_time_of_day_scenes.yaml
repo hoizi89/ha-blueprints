@@ -524,7 +524,7 @@ actions:
                     value_template: "{{ has_override_adaptive_lights }}"
                 then:
                   - action: light.turn_on
-                    target: !input override_adaptive_lights
+                    target: "{{ override_adaptive_lights }}"
 
       # ===== LICHT MANUELL EINGESCHALTET =====
       - conditions:
