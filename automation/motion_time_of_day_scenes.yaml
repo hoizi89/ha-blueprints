@@ -566,27 +566,20 @@ actions:
       - conditions:
           - condition: trigger
             id: motion_on
+          - condition: template
+            value_template: "{{ lights_are_on or (can_activate and has_current_scene) }}"
         sequence:
-          # Ausschalt-Timer IMMER neu starten (verlängern) wenn Lichter an
+          # Ausschalt-Timer neu starten (verlängern)
+          - action: timer.start
+            target:
+              entity_id: !input off_timer
+            data:
+              duration: "{{ current_off_delay }}"
+          # Szene nur aktivieren wenn erlaubt (und Licht noch nicht an)
           - if:
               - condition: template
-                value_template: "{{ lights_are_on }}"
+                value_template: "{{ can_activate and has_current_scene and not lights_are_on }}"
             then:
-              - action: timer.start
-                target:
-                  entity_id: !input off_timer
-                data:
-                  duration: "{{ current_off_delay }}"
-          # Szene nur aktivieren wenn erlaubt
-          - if:
-              - condition: template
-                value_template: "{{ can_activate and has_current_scene }}"
-            then:
-              - action: timer.start
-                target:
-                  entity_id: !input off_timer
-                data:
-                  duration: "{{ current_off_delay }}"
               - action: scene.turn_on
                 target:
                   entity_id: "{{ current_scene }}"
