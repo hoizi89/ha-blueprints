@@ -566,27 +566,39 @@ actions:
       - conditions:
           - condition: trigger
             id: motion_on
-          - condition: template
-            value_template: "{{ can_activate and has_current_scene }}"
         sequence:
-          # Ausschalt-Timer neu starten (verlängern)
-          - action: timer.start
-            target:
-              entity_id: !input off_timer
-            data:
-              duration: "{{ current_off_delay }}"
-          - action: scene.turn_on
-            target:
-              entity_id: "{{ current_scene }}"
-            data:
-              transition: "{{ transition_time }}"
-          # Adaptive Lights einschalten (ohne Werte → AL übernimmt)
+          # Ausschalt-Timer IMMER neu starten (verlängern) wenn Lichter an
           - if:
               - condition: template
-                value_template: "{{ has_current_adaptive_lights }}"
+                value_template: "{{ lights_are_on }}"
             then:
-              - action: light.turn_on
-                target: "{{ current_adaptive_lights }}"
+              - action: timer.start
+                target:
+                  entity_id: !input off_timer
+                data:
+                  duration: "{{ current_off_delay }}"
+          # Szene nur aktivieren wenn erlaubt
+          - if:
+              - condition: template
+                value_template: "{{ can_activate and has_current_scene }}"
+            then:
+              - action: timer.start
+                target:
+                  entity_id: !input off_timer
+                data:
+                  duration: "{{ current_off_delay }}"
+              - action: scene.turn_on
+                target:
+                  entity_id: "{{ current_scene }}"
+                data:
+                  transition: "{{ transition_time }}"
+              # Adaptive Lights einschalten (ohne Werte → AL übernimmt)
+              - if:
+                  - condition: template
+                    value_template: "{{ has_current_adaptive_lights }}"
+                then:
+                  - action: light.turn_on
+                    target: "{{ current_adaptive_lights }}"
 
       # ===== BEWEGUNG WEG =====
       - conditions:
