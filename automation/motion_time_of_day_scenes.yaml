@@ -468,6 +468,9 @@
         - conditions:
             - condition: trigger
               id: switch_toggle
+            # Cooldown aktiv = ignorieren (verhindert Doppel-Trigger)
+            - condition: template
+              value_template: "{{ not is_cooldown }}"
           sequence:
             - choose:
                 # Lichter bereits AN → Ausschalten (Toggle-Verhalten)
@@ -477,14 +480,18 @@
                   sequence:
                     - action: timer.cancel
                       target:
-                        entity_id: !input cooldown_timer
-                    - action: timer.cancel
-                      target:
                         entity_id: !input off_timer
                     - action: light.turn_off
                       target: !input target_lights
                       data:
                         transition: "{{ transition_time }}"
+                    # Kurzer Cooldown nach Ausschalten (verhindert Race-Condition)
+                    - action: timer.start
+                      target:
+                        entity_id: !input cooldown_timer
+                      data:
+                        duration:
+                          seconds: 2
               # Lichter AUS → Override aktivieren
               default:
                 - action: timer.start
