@@ -470,10 +470,10 @@
               id: switch_toggle
           sequence:
             - choose:
-                # Cooldown aktiv UND Lichter an = Override läuft = ausschalten
+                # Lichter bereits AN → Ausschalten (Toggle-Verhalten)
                 - conditions:
                     - condition: template
-                      value_template: "{{ is_cooldown and lights_are_on }}"
+                      value_template: "{{ lights_are_on }}"
                   sequence:
                     - action: timer.cancel
                       target:
@@ -485,7 +485,7 @@
                       target: !input target_lights
                       data:
                         transition: "{{ transition_time }}"
-              # Sonst: IMMER Override aktivieren
+              # Lichter AUS → Override aktivieren
               default:
                 - action: timer.start
                   target:
