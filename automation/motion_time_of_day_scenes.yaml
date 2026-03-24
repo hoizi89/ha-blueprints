@@ -69,7 +69,7 @@
 
       monitor_light:
         name: "6. Licht-Überwachung (optional)"
-        description: "Ein Licht oder Gruppe zum Erkennen manueller Änderungen (HA-App, etc.)"
+        description: "Ein Licht zum Erkennen manueller Änderungen UND als Referenz ob das Licht wirklich an ist. Bei WLED: das Main-Segment verwenden (nicht Ambiente/Porsche Segment-Toggles)."
         default: []
         selector:
           entity:
@@ -409,9 +409,13 @@
 
     target_lights_input: !input target_lights
     lights_are_on: >
-      {% set entities = target_lights_input.entity_id | default([]) %}
-      {% set entity_list = [entities] if entities is string else entities %}
-      {{ entity_list | select('is_state', 'on') | list | count > 0 }}
+      {% if has_monitor_light %}
+        {{ states(monitor_light) == 'on' }}
+      {% else %}
+        {% set entities = target_lights_input.entity_id | default([]) %}
+        {% set entity_list = [entities] if entities is string else entities %}
+        {{ entity_list | select('is_state', 'on') | list | count > 0 }}
+      {% endif %}
 
   triggers:
     - id: motion_on
