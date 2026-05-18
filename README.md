@@ -50,6 +50,37 @@ Schaltet je nach Tageszeit unterschiedliche Szenen per Bewegungsmelder.
 
 ---
 
+### Geräte-PV-Start (Fast / Optimal)
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://github.com/hoizi89/ha-blueprints/blob/master/automation/device_pv_start.yaml)
+
+**Datei:** `automation/device_pv_start.yaml`
+
+> ⚠️ **Beta / lightly tested** – vor produktivem Einsatz selbst prüfen.
+
+Startet ein Haushaltsgerät (Geschirrspüler, Waschmaschine …) bei verfügbarer PV-Überschussleistung. Die geräteabhängige Start-Sequenz wird als Aktion übergeben – damit passt eine Vorlage für beliebige Geräte.
+
+#### Features:
+- Zwei Modi über einen `input_select`-Helfer: **Fast** und **Optimal**
+- **Fast:** Start ab der Fast-Schwelle, spätestens zur Garantie-Uhrzeit
+- **Optimal:** wartet auf hohe PV-Leistung + Mindest-Ladestand; nach dem Tages-Peak abgestufte Fallbacks
+- Sicherheitsnetz: Start spätestens bei Sonnenuntergang
+- Optionale Aktionen bei Aktivierung/Deaktivierung (z. B. Steckdose trennen/freigeben)
+- Alle Schwellen und Zeiten konfigurierbar
+
+#### Voraussetzung:
+Ein `input_select`-Helfer mit exakt den Optionen **Aus**, **Fast**, **Optimal**.
+
+#### Funktionsweise:
+1. **PV-Modus auf Fast/Optimal** → Automatik aktiv (optionale Aktivierungs-Aktion)
+2. **Genug PV-Leistung** (modusabhängig) → Start-Aktion läuft, Modus springt auf „Aus"
+3. **Sonnenuntergang** → Start in jedem Fall (Timeout-Sicherung)
+4. **PV-Modus zurück auf Aus** → optionale Deaktivierungs-Aktion
+
+In allen Aktions-Eingaben verfügbar: `reason`, `mode`, `pv_now`, `soc_now`.
+
+---
+
 ## Lizenz
 
 MIT License

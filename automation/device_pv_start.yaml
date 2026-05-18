@@ -1,0 +1,256 @@
+blueprint:
+  name: Geräte-PV-Start (Fast / Optimal)
+  description: |
+    Startet ein Haushaltsgerät bei verfügbarer PV-Überschussleistung.
+
+    Modi (gesteuert über einen input_select-Helfer):
+    - Fast    – startet ab der Fast-Schwelle, spätestens zur Garantie-Uhrzeit
+    - Optimal – wartet auf hohe PV-Leistung + Mindest-Ladestand; nach dem
+      prognostizierten Tages-Peak greifen abgestufte Fallbacks
+    - Aus     – Automatik inaktiv
+
+    Sicherheitsnetz: bei Sonnenuntergang wird in jedem Fall gestartet.
+
+    Die geräteabhängige Start-Sequenz wird als Aktion übergeben – damit
+    funktioniert die Vorlage für Geschirrspüler (Programmwahl),
+    Waschmaschine (Steckdose schalten) und beliebige andere Geräte.
+
+    In allen Aktions-Eingaben verfügbar: die Variablen reason, mode,
+    pv_now und soc_now (z. B. für eine Benachrichtigung).
+
+    Voraussetzung: ein input_select-Helfer mit exakt den Optionen
+    "Aus", "Fast" und "Optimal".
+
+    HINWEIS: Beta / lightly tested – vor produktivem Einsatz selbst prüfen.
+  domain: automation
+  source_url: https://github.com/hoizi89/ha-blueprints/blob/master/automation/device_pv_start.yaml
+  author: hoizi89
+  input:
+    pv_mode_select:
+      name: "1. PV-Modus-Auswahl"
+      description: input_select-Helfer mit den Optionen Aus / Fast / Optimal.
+      selector:
+        entity:
+          filter:
+            domain: input_select
+    pv_available_sensor:
+      name: "2. Verfügbare PV-Leistung"
+      description: Sensor der PV-Überschussleistung in Watt (z. B. PV minus Hausverbrauch).
+      selector:
+        entity:
+          filter:
+            domain: sensor
+    battery_soc_sensor:
+      name: "3. Batterie-Ladestand"
+      description: Sensor des Batterie-Ladestands in Prozent.
+      selector:
+        entity:
+          filter:
+            domain: sensor
+    start_actions:
+      name: "4. Start-Aktion"
+      description: >-
+        Was passieren soll, um das Gerät zu starten – z. B. Programm wählen
+        oder Steckdose einschalten.
+      selector:
+        action: {}
+    activate_actions:
+      name: "Aktion bei Aktivierung (optional)"
+      description: >-
+        Läuft, wenn der PV-Modus von "Aus" auf Fast/Optimal gestellt wird –
+        z. B. Steckdose trennen, damit das Gerät noch nicht startet.
+      default: []
+      selector:
+        action: {}
+    deactivate_actions:
+      name: "Aktion bei Deaktivierung (optional)"
+      description: >-
+        Läuft, wenn der PV-Modus zurück auf "Aus" gestellt wird –
+        z. B. Steckdose wieder einschalten.
+      default: []
+      selector:
+        action: {}
+    solcast_peak_time_sensor:
+      name: "Solcast Peak-Zeitpunkt (optional)"
+      description: >-
+        Sensor mit dem Zeitpunkt der prognostizierten Tages-Spitzenleistung.
+        Ohne diesen Sensor entfallen die Optimal-Fallbacks nach dem Peak.
+      default: []
+      selector:
+        entity:
+          filter:
+            domain: sensor
+    fast_threshold:
+      name: "Fast-Schwelle"
+      description: Ab dieser PV-Leistung startet der Fast-Modus.
+      default: 500
+      selector:
+        number:
+          min: 0
+          max: 10000
+          step: 50
+          unit_of_measurement: W
+          mode: box
+    optimal_threshold:
+      name: "Optimal-Schwelle"
+      description: Ziel-PV-Leistung für den Optimal-Modus.
+      default: 3000
+      selector:
+        number:
+          min: 0
+          max: 15000
+          step: 100
+          unit_of_measurement: W
+          mode: box
+    smart_fallback_threshold:
+      name: "Optimal Smart-Fallback-Schwelle"
+      description: Nach dem Tages-Peak genügt diese reduzierte PV-Leistung.
+      default: 1500
+      selector:
+        number:
+          min: 0
+          max: 15000
+          step: 100
+          unit_of_measurement: W
+          mode: box
+    peak_fallback_min:
+      name: "Optimal Peak-Fallback-Mindestleistung"
+      description: >-
+        Letzter Fallback nach dem Peak – startet schon bei minimaler
+        PV-Leistung über diesem Wert.
+      default: 100
+      selector:
+        number:
+          min: 0
+          max: 5000
+          step: 50
+          unit_of_measurement: W
+          mode: box
+    min_soc:
+      name: "Mindest-Batterie-Ladestand"
+      description: Der Optimal-Modus startet nur, wenn der Ladestand darüber liegt.
+      default: 25
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 5
+          unit_of_measurement: "%"
+          mode: box
+    fast_guarantee_time:
+      name: "Fast-Garantie-Uhrzeit"
+      description: >-
+        Im Fast-Modus wird spätestens zu dieser Uhrzeit gestartet,
+        auch ohne ausreichende PV-Leistung.
+      default: "08:30:00"
+      selector:
+        time: {}
+
+mode: single
+max_exceeded: silent
+
+variables:
+  mode_select: !input pv_mode_select
+  pv_sensor: !input pv_available_sensor
+  soc_sensor: !input battery_soc_sensor
+  peak_sensor: !input solcast_peak_time_sensor
+  th_fast: !input fast_threshold
+  th_optimal: !input optimal_threshold
+  th_smart: !input smart_fallback_threshold
+  th_peak_min: !input peak_fallback_min
+  min_soc: !input min_soc
+  pv_now: "{{ states(pv_sensor) | float(0) }}"
+  soc_now: "{{ states(soc_sensor) | float(0) }}"
+  mode: "{{ states(mode_select) }}"
+  after_peak: >-
+    {{ peak_sensor is string and peak_sensor | length > 0
+       and states(peak_sensor) not in ['unknown', 'unavailable']
+       and now() > as_datetime(states(peak_sensor), now()) }}
+  do_start: >-
+    {{ trigger.id not in ['activated', 'deactivated'] and (
+         (mode == 'Fast' and trigger.id in ['pv_fast', 'periodic_check'] and pv_now > th_fast)
+      or (mode == 'Fast' and trigger.id == 'fast_garantie')
+      or (trigger.id == 'timeout')
+      or (mode == 'Optimal' and trigger.id in ['pv_optimal', 'periodic_check']
+          and pv_now > th_optimal and soc_now > min_soc)
+      or (mode == 'Optimal' and trigger.id in ['pv_smart_fallback', 'periodic_check']
+          and pv_now > th_smart and soc_now > min_soc and after_peak)
+      or (mode == 'Optimal' and trigger.id == 'periodic_check'
+          and pv_now > th_peak_min and after_peak)
+    ) }}
+  reason: >-
+    {{ 'Sonnenuntergang-Timeout' if trigger.id == 'timeout'
+       else 'Fast-Garantie' if trigger.id == 'fast_garantie'
+       else 'PV Fast' if mode == 'Fast'
+       else 'PV Optimal' }}
+
+triggers:
+  - trigger: state
+    entity_id: !input pv_mode_select
+    from: "Aus"
+    id: activated
+  - trigger: state
+    entity_id: !input pv_mode_select
+    to: "Aus"
+    id: deactivated
+  - trigger: numeric_state
+    entity_id: !input pv_available_sensor
+    above: !input fast_threshold
+    for:
+      minutes: 3
+    id: pv_fast
+  - trigger: time
+    at: !input fast_guarantee_time
+    id: fast_garantie
+  - trigger: numeric_state
+    entity_id: !input pv_available_sensor
+    above: !input optimal_threshold
+    for:
+      minutes: 5
+    id: pv_optimal
+  - trigger: numeric_state
+    entity_id: !input pv_available_sensor
+    above: !input smart_fallback_threshold
+    for:
+      minutes: 5
+    id: pv_smart_fallback
+  - trigger: sun
+    event: sunset
+    id: timeout
+  - trigger: time_pattern
+    minutes: "/10"
+    id: periodic_check
+
+conditions:
+  - condition: or
+    conditions:
+      - condition: trigger
+        id: deactivated
+      - condition: not
+        conditions:
+          - condition: state
+            entity_id: !input pv_mode_select
+            state: "Aus"
+
+actions:
+  - if:
+      - condition: trigger
+        id: activated
+    then: !input activate_actions
+  - if:
+      - condition: trigger
+        id: deactivated
+    then: !input deactivate_actions
+  - if:
+      - condition: template
+        value_template: "{{ do_start }}"
+    then: !input start_actions
+  - if:
+      - condition: template
+        value_template: "{{ do_start }}"
+    then:
+      - action: input_select.select_option
+        target:
+          entity_id: !input pv_mode_select
+        data:
+          option: "Aus"
