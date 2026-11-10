@@ -11,6 +11,8 @@ blueprint:
     - Erkennt manuelle Steuerung (HA-App, etc.) - optional
     - Helligkeitsprüfung (optional): Lux-Sensor/PV-Leistung mit Schwelle und/oder Tageslicht-Binärsensor
     - Hell-Szene (optional): reduziertes Licht statt gar keinem, wenn es hell ist
+    - Wetter-Weiche (optional): bei trübem Wetter eine eigene Szene für Morgen, Tag und Abend
+    - Abwechslung (optional): weitere Szenen je Tageszeit, eine pro Tag
     - Blocker zum Deaktivieren
     - Licht-Aktionen laufen mit continue_on_error weiter, wenn ein einzelnes Gerät nicht antwortet
     - Tageszeitwechsel setzt die neue Szene nur, wenn das Licht bereits an ist (schaltet nie von selbst ein)
@@ -299,6 +301,113 @@ blueprint:
           filter:
             domain: scene
 
+    weather_entity:
+      name: "Wetter-Weiche: Wetter-Entität"
+      description: "Optional. Ist ihr Zustand einer der trüben Zustände unten, wird statt der Tageszeit-Szene die Trüb-Szene dieser Tageszeit verwendet (falls gesetzt). Leer = keine Wetter-Weiche."
+      default: []
+      selector:
+        entity:
+          filter:
+            domain: weather
+
+    dull_weather_states:
+      name: "Wetter-Weiche: trübe Zustände"
+      description: "Bei diesen Wetter-Zuständen gilt es als trüb."
+      default:
+        - cloudy
+        - fog
+        - rainy
+        - pouring
+        - snowy
+        - snowy-rainy
+        - hail
+        - lightning
+        - lightning-rainy
+      selector:
+        select:
+          multiple: true
+          options:
+            - { label: "Bewölkt", value: cloudy }
+            - { label: "Teilweise bewölkt", value: partlycloudy }
+            - { label: "Nebel", value: fog }
+            - { label: "Regen", value: rainy }
+            - { label: "Starkregen", value: pouring }
+            - { label: "Schnee", value: snowy }
+            - { label: "Schneeregen", value: snowy-rainy }
+            - { label: "Hagel", value: hail }
+            - { label: "Gewitter", value: lightning }
+            - { label: "Gewitter mit Regen", value: lightning-rainy }
+            - { label: "Wind", value: windy }
+            - { label: "Wind und Wolken", value: windy-variant }
+            - { label: "Außergewöhnlich", value: exceptional }
+
+    morning_scene_dull:
+      name: "Wetter-Weiche: Morgen-Szene bei trübem Wetter"
+      description: "Optional. Leer = auch bei trübem Wetter die normale Morgen-Szene."
+      default: []
+      selector:
+        entity:
+          filter:
+            domain: scene
+
+    day_scene_dull:
+      name: "Wetter-Weiche: Tag-Szene bei trübem Wetter"
+      description: "Optional. Leer = auch bei trübem Wetter die normale Tag-Szene."
+      default: []
+      selector:
+        entity:
+          filter:
+            domain: scene
+
+    evening_scene_dull:
+      name: "Wetter-Weiche: Abend-Szene bei trübem Wetter"
+      description: "Optional. Leer = auch bei trübem Wetter die normale Abend-Szene."
+      default: []
+      selector:
+        entity:
+          filter:
+            domain: scene
+
+    morning_scene_rotation:
+      name: "Abwechslung: weitere Morgen-Szenen"
+      description: "Optional. Diese Szenen wechseln sich mit der Morgen-Szene ab, eine pro Tag (nicht bei jeder Bewegung). Bei trübem Wetter gilt die Trüb-Szene."
+      default: []
+      selector:
+        entity:
+          multiple: true
+          filter:
+            domain: scene
+
+    day_scene_rotation:
+      name: "Abwechslung: weitere Tag-Szenen"
+      description: "Optional. Wechseln sich mit der Tag-Szene ab, eine pro Tag."
+      default: []
+      selector:
+        entity:
+          multiple: true
+          filter:
+            domain: scene
+
+    evening_scene_rotation:
+      name: "Abwechslung: weitere Abend-Szenen"
+      description: "Optional. Wechseln sich mit der Abend-Szene ab, eine pro Tag."
+      default: []
+      selector:
+        entity:
+          multiple: true
+          filter:
+            domain: scene
+
+    night_scene_rotation:
+      name: "Abwechslung: weitere Nacht-Szenen"
+      description: "Optional. Wechseln sich mit der Nacht-Szene ab, eine pro Nacht."
+      default: []
+      selector:
+        entity:
+          multiple: true
+          filter:
+            domain: scene
+
     presence_max_duration:
       name: "Wächter: maximale Dauer-Anwesenheit"
       description: "Optional. Meldet der Melder länger als diese Zeit ununterbrochen Anwesenheit, wird das Licht ausgeschaltet (hängender Präsenzmelder). 0 = Wächter aus."
@@ -403,17 +512,49 @@ variables:
   has_evening_scene: "{{ evening_scene | length > 0 }}"
   has_night_scene: "{{ night_scene | length > 0 }}"
 
+  # ----- Wetter-Weiche -----
+  weather_entity: !input weather_entity
+  dull_weather_states: !input dull_weather_states
+  morning_scene_dull: !input morning_scene_dull
+  day_scene_dull: !input day_scene_dull
+  evening_scene_dull: !input evening_scene_dull
+  is_dull: "{{ weather_entity | length > 0 and states(weather_entity) in dull_weather_states }}"
+
+  # ----- Abwechslung: eine Szene pro Tag, nicht bei jeder Bewegung -----
+  morning_scene_rotation: !input morning_scene_rotation
+  day_scene_rotation: !input day_scene_rotation
+  evening_scene_rotation: !input evening_scene_rotation
+  night_scene_rotation: !input night_scene_rotation
+  # Die Nacht nach Mitternacht zählt zum Vortag, damit eine Nacht eine Szene behält.
+  rotation_day: >
+    {% if now_minutes < morning_minutes %}
+      {{ (now() - timedelta(days=1)).strftime('%j') | int }}
+    {% else %}
+      {{ now().strftime('%j') | int }}
+    {% endif %}
+
   current_scene: >
+    {% macro pick(base, extra) -%}
+      {%- set c = ([base] + (extra if extra is list else [extra]))
+                  | reject('equalto', '') | reject('equalto', none) | unique | list -%}
+      {{ c[(rotation_day | int(0)) % (c | length)] }}
+    {%- endmacro %}
     {% if use_bright_scene %}
       {{ bright_scene }}
+    {% elif is_morning and is_dull and morning_scene_dull | length > 0 %}
+      {{ morning_scene_dull }}
     {% elif is_morning and has_morning_scene %}
-      {{ morning_scene }}
+      {{ pick(morning_scene, morning_scene_rotation) }}
+    {% elif is_day and is_dull and day_scene_dull | length > 0 %}
+      {{ day_scene_dull }}
     {% elif is_day and has_day_scene %}
-      {{ day_scene }}
+      {{ pick(day_scene, day_scene_rotation) }}
+    {% elif is_evening and is_dull and evening_scene_dull | length > 0 %}
+      {{ evening_scene_dull }}
     {% elif is_evening and has_evening_scene %}
-      {{ evening_scene }}
+      {{ pick(evening_scene, evening_scene_rotation) }}
     {% elif is_night and has_night_scene %}
-      {{ night_scene }}
+      {{ pick(night_scene, night_scene_rotation) }}
     {% else %}
       none
     {% endif %}

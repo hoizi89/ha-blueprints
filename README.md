@@ -31,6 +31,8 @@ Schaltet je nach Tageszeit unterschiedliche Szenen per Bewegungsmelder.
 - Optionale Helligkeitsprüfung (nur bei Dunkelheit aktivieren)
 - Konfigurierbare Ausschaltverzögerung
 - Sanfte Übergänge mit einstellbarer Transition-Zeit
+- Wetter-Weiche (optional): bei trübem Wetter (bewölkt, Regen, Nebel, Schnee …) eine eigene Szene für Morgen, Tag und Abend
+- Abwechslung (optional): weitere Szenen je Tageszeit, die sich täglich abwechseln (nicht bei jeder Bewegung)
 
 #### Funktionsweise:
 1. **Bewegung erkannt** → Szene passend zur Tageszeit wird aktiviert
